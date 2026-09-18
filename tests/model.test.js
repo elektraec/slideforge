@@ -33,6 +33,12 @@ test('standard Mermaid fenced code becomes a diagram', () => {
   assert.doesNotMatch(html, /<pre>/);
 });
 
+test('Mermaid blocks decode pasted HTML space entities before diagram lines', () => {
+  const html = renderContent(':::mermaid\ntimeline\n&#x20;   title Evolución\n&#x20;   1950s : Computación por lotes\n:::');
+  assert.match(html, /timeline\n    title Evolución/);
+  assert.doesNotMatch(html, /&#x20;|&amp;#x20;/);
+});
+
 test('equations render offline with KaTeX markup', () => {
   assert.match(renderContent('$$E = mc^2$$'), /class="katex/);
 });

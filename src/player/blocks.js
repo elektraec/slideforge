@@ -50,7 +50,10 @@ export function renderBlock(type, body) {
     }
     case 'calculator': return `<div class="sf-card sf-calculator"><label>${esc(field(body, 'label', 'Valor'))} <input type="number" value="0"></label><p>${esc(field(body, 'formula', 'Resultado'))}: <output>0</output></p><small>Resultado = valor × ${esc(field(body, 'factor', '2'))}</small></div>`;
     case 'form': return `<form class="sf-card sf-form"><label>${esc(field(body, 'question', 'Tu respuesta'))}<input required></label><button>Enviar</button><p class="sf-feedback" role="status"></p></form>`;
-    case 'mermaid': return `<div class="sf-mermaid" data-source="${esc(body.trim())}">Cargando diagrama…</div>`;
+    case 'mermaid': {
+      const source = body.replace(/^(?:[ \t]|&#x20;|&#32;|&nbsp;)+/gmi, prefix => prefix.replace(/&#x20;|&#32;|&nbsp;/gi, ' ')).trim();
+      return `<div class="sf-mermaid" data-source="${esc(source)}">Cargando diagrama…</div>`;
+    }
     case 'columns': {
       const [left, right = ''] = body.split(/^\s*---\s*$/m);
       return `<div class="sf-columns"><div>${md(left)}</div><div>${md(right)}</div></div>`;
