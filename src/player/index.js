@@ -7,6 +7,7 @@ import RevealZoom from 'reveal.js/plugin/zoom';
 import mermaid from 'mermaid';
 import { renderContent } from './blocks.js';
 import { prepareMermaidSource } from './mermaid-source.js';
+import { fitDiagram } from './diagram-layout.js';
 import { mountInteractions } from './interactions.js';
 import { normalizeProject } from '../model.js';
 import 'reveal.js/reveal.css';
@@ -66,6 +67,8 @@ async function draw(projectInput) {
     try {
       const id = `sfmermaid${++mermaidSerial}`;
       const source = prepareMermaidSource(node.dataset.source);
+      const flowchart = /^\s*(?:flowchart|graph)\b/i.test(source);
+      if (flowchart) node.classList.add('sf-mermaid-flowchart');
       const result = await mermaid.render(id, source);
       node.innerHTML = result.svg;
       const svg = node.querySelector('svg');
@@ -78,6 +81,11 @@ async function draw(projectInput) {
         svg.removeAttribute('width');
         svg.removeAttribute('height');
         svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        const viewBox = svg.getAttribute('viewBox')?.trim().split(/[\s,]+/).map(Number);
+        if (flowchart && viewBox?.length === 4) {
+          const fitted = fitDiagram(viewBox[2], viewBox[3], Math.min(width * 0.78, 900), 460);
+          if (fitted) svg.style.setProperty('--sf-diagram-width', `${fitted.width}px`);
+        }
       }
       result.bindFunctions?.(node);
     } catch (error) {
