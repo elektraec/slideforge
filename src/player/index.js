@@ -20,7 +20,7 @@ let rendering = false;
 let pendingProject;
 let mermaidSerial = 0;
 mountInteractions(slideRoot);
-mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'base', themeVariables: { primaryColor: '#f4effa', primaryTextColor: '#3a1467', primaryBorderColor: '#542e91', lineColor: '#f37121' } });
+mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'base', timeline: { useMaxWidth: true }, themeVariables: { primaryColor: '#f4effa', primaryTextColor: '#3a1467', primaryBorderColor: '#542e91', lineColor: '#f37121' } });
 
 function assetContent(content, assets) {
   return content.replace(/(?:assets\/)([\w.\-]+)/g, (match, name) => assets[name] || match);
@@ -66,6 +66,17 @@ async function draw(projectInput) {
       const source = node.dataset.source;
       const result = await mermaid.render(id, source, node);
       node.innerHTML = result.svg;
+      const svg = node.querySelector('svg');
+      if (svg) {
+        if (!svg.hasAttribute('viewBox')) {
+          const width = Number.parseFloat(svg.getAttribute('width'));
+          const height = Number.parseFloat(svg.getAttribute('height'));
+          if (width > 0 && height > 0) svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        }
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      }
       result.bindFunctions?.(node);
     } catch (error) {
       node.textContent = `Error en Mermaid: ${error.message}`;
