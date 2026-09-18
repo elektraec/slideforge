@@ -39,6 +39,14 @@ test('Mermaid blocks decode pasted HTML space entities before diagram lines', ()
   assert.doesNotMatch(html, /&#x20;|&amp;#x20;/);
 });
 
+test('two Mermaid blocks in one slide remain separate diagrams', () => {
+  const source = ':::mermaid\ntimeline\n&#x20; title Evolución\n&#x20; 2020 : Primera etapa\n&#x20; 2024 : Segunda etapa\n:::\n\n:::mermaid\nflowchart LR\n&#x20; Usuario --> Interfaz\n&#x20; Interfaz --> Sistema\n:::';
+  const html = renderContent(source);
+  assert.equal((html.match(/class="sf-mermaid"/g) || []).length, 2);
+  assert.match(html, /data-source="timeline/);
+  assert.match(html, /data-source="flowchart LR/);
+});
+
 test('equations render offline with KaTeX markup', () => {
   assert.match(renderContent('$$E = mc^2$$'), /class="katex/);
 });

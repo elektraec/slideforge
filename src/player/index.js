@@ -44,6 +44,7 @@ async function draw(projectInput) {
     const section = document.createElement('section');
     section.className = `sf-slide sf-slide-${slide.kind}`;
     section.innerHTML = `<div class="sf-slide-inner">${renderContent(assetContent(slide.content, assets))}</div>`;
+    if (section.querySelector('.sf-mermaid')) section.classList.add('sf-slide-has-mermaid');
     if (config.branding.logo && logoAllowed(slide.kind, config.branding.logoMode)) {
       const img = document.createElement('img');
       img.className = `sf-logo sf-logo-${config.branding.logoPosition}`;
@@ -64,7 +65,7 @@ async function draw(projectInput) {
     try {
       const id = `sfmermaid${++mermaidSerial}`;
       const source = node.dataset.source;
-      const result = await mermaid.render(id, source, node);
+      const result = await mermaid.render(id, source);
       node.innerHTML = result.svg;
       const svg = node.querySelector('svg');
       if (svg) {
