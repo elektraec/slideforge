@@ -26,6 +26,13 @@ test('interactive syntax renders real controls and Mermaid source', () => {
   assert.match(html, /flowchart LR/);
 });
 
+test('standard Mermaid fenced code becomes a diagram', () => {
+  const html = renderContent('# Flujo\n\n```mermaid\nflowchart LR\n A --> B\n```');
+  assert.match(html, /class="sf-mermaid"/);
+  assert.match(html, /flowchart LR/);
+  assert.doesNotMatch(html, /<pre>/);
+});
+
 test('equations render offline with KaTeX markup', () => {
   assert.match(renderContent('$$E = mc^2$$'), /class="katex/);
 });

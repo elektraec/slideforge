@@ -30,6 +30,8 @@ feedback: Correcto.
 
 Existen `quiz`, `truefalse`, `flashcards`, `tabs`, `accordion`, `answer`, `sort`, `match`, `slider`, `hotspot`, `calculator`, `form`, `mermaid`, `columns` e `iframe`. El generador de prompts produce texto para copiar a una herramienta externa; no realiza peticiones a servicios de IA.
 
+Los diagramas aceptan tanto `:::mermaid` como bloques de código Markdown etiquetados `mermaid`.
+
 ## Archivos
 
 - **Exportar Markdown:** `slides.md` con notas y metadatos de plantilla.

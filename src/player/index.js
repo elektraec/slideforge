@@ -2,7 +2,6 @@ import Reveal from 'reveal.js';
 import RevealMarkdown from 'reveal.js/plugin/markdown';
 import RevealHighlight from 'reveal.js/plugin/highlight';
 import RevealNotes from 'reveal.js/plugin/notes';
-import RevealMath from 'reveal.js/plugin/math';
 import RevealSearch from 'reveal.js/plugin/search';
 import RevealZoom from 'reveal.js/plugin/zoom';
 import mermaid from 'mermaid';
@@ -61,16 +60,20 @@ async function draw(projectInput) {
     slideRoot.append(section);
   });
   const width = config.ratio === '4:3' ? 960 : 1280;
-  deck = new Reveal(revealRoot, { width, height: 720, margin: 0.06, minScale: 0.2, maxScale: 2, controls: !!config.controls, progress: !!config.progress, slideNumber: !!config.slideNumber, transition: config.transition, hash: !window.frameElement, plugins: [RevealMarkdown, RevealHighlight, RevealNotes, RevealMath.KaTeX, RevealSearch, RevealZoom] });
-  await deck.initialize();
   for (const node of slideRoot.querySelectorAll('.sf-mermaid')) {
     try {
       const id = `sfmermaid${++mermaidSerial}`;
-      const result = await mermaid.render(id, node.dataset.source);
+      const source = node.dataset.source;
+      const result = await mermaid.render(id, source, node);
       node.innerHTML = result.svg;
       result.bindFunctions?.(node);
-    } catch (error) { node.textContent = `Error en Mermaid: ${error.message}`; }
+    } catch (error) {
+      node.textContent = `Error en Mermaid: ${error.message}`;
+      console.error('SlideForge Mermaid:', error);
+    }
   }
+  deck = new Reveal(revealRoot, { width, height: 720, margin: 0.06, minScale: 0.2, maxScale: 2, controls: !!config.controls, progress: !!config.progress, slideNumber: !!config.slideNumber, transition: config.transition, hash: !window.frameElement, plugins: [RevealMarkdown, RevealHighlight, RevealNotes, RevealSearch, RevealZoom] });
+  await deck.initialize();
   deck.layout();
   if (config.enableCustomJs && config.customJs) {
     try { new Function('deck', 'root', 'project', config.customJs)(deck, slideRoot, project); }

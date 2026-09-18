@@ -65,7 +65,8 @@ export function renderBlock(type, body) {
 
 export function renderContent(source) {
   const blocks = [];
-  const prepared = source.replace(/^:::([a-z]+)\s*\n([\s\S]*?)^:::\s*$/gm, (_, type, body) => {
+  const normalized = source.replace(/^```mermaid[ \t]*\n([\s\S]*?)^```[ \t]*$/gm, (_, body) => `:::mermaid\n${body.trimEnd()}\n:::`);
+  const prepared = normalized.replace(/^:::([a-z]+)\s*\n([\s\S]*?)^:::\s*$/gm, (_, type, body) => {
     const token = `SLIDEFORGEBLOCK${blocks.length}END`;
     blocks.push(renderBlock(type, body));
     return `\n\n${token}\n\n`;
