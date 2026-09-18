@@ -245,6 +245,8 @@ sankey-beta
 ## Consejos para que se vea bien en una diapositiva
 
 - Usa pocos nodos y etiquetas breves; divide diagramas grandes en varias diapositivas.
+- En `flowchart`, SlideForge ajusta automáticamente las etiquetas largas de nodos rectangulares. Puedes forzar un salto de línea con `<br>` dentro de una etiqueta.
+- Para líneas de tiempo con muchos eventos o frases largas, prueba `timeline TD` para distribuirlos de arriba hacia abajo.
 - Prefiere `LR` para procesos cortos y `TD` para diagramas con muchas ramas.
 - Mantén una línea por relación o elemento. Respeta la indentación en mapas mentales.
 - Si aparece **Error en Mermaid**, revisa la primera línea, los dos puntos, las comillas y los identificadores. Prueba primero un ejemplo mínimo.

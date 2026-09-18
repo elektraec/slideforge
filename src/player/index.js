@@ -6,6 +6,7 @@ import RevealSearch from 'reveal.js/plugin/search';
 import RevealZoom from 'reveal.js/plugin/zoom';
 import mermaid from 'mermaid';
 import { renderContent } from './blocks.js';
+import { prepareMermaidSource } from './mermaid-source.js';
 import { mountInteractions } from './interactions.js';
 import { normalizeProject } from '../model.js';
 import 'reveal.js/reveal.css';
@@ -20,7 +21,7 @@ let rendering = false;
 let pendingProject;
 let mermaidSerial = 0;
 mountInteractions(slideRoot);
-mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'base', timeline: { useMaxWidth: true }, themeVariables: { primaryColor: '#f4effa', primaryTextColor: '#3a1467', primaryBorderColor: '#542e91', lineColor: '#f37121' } });
+mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'base', fontFamily: 'Arial, sans-serif', fontSize: '16px', markdownAutoWrap: true, flowchart: { wrappingWidth: 180 }, timeline: { useMaxWidth: true }, themeVariables: { primaryColor: '#f4effa', primaryTextColor: '#3a1467', primaryBorderColor: '#542e91', lineColor: '#f37121' } });
 
 function assetContent(content, assets) {
   return content.replace(/(?:assets\/)([\w.\-]+)/g, (match, name) => assets[name] || match);
@@ -64,7 +65,7 @@ async function draw(projectInput) {
   for (const node of slideRoot.querySelectorAll('.sf-mermaid')) {
     try {
       const id = `sfmermaid${++mermaidSerial}`;
-      const source = node.dataset.source;
+      const source = prepareMermaidSource(node.dataset.source);
       const result = await mermaid.render(id, source);
       node.innerHTML = result.svg;
       const svg = node.querySelector('svg');
