@@ -5,3 +5,4 @@
 .sf-slide-inner{width:100%;min-width:0}.sf-mermaid{display:block;width:100%;min-width:0;max-width:100%;max-height:none;overflow:visible}.sf-mermaid svg{display:block;width:100%!important;height:auto!important;max-width:100%!important;margin:0 auto;overflow:visible}
 .sf-slide-has-mermaid .sf-slide-inner{height:auto;min-height:100%;justify-content:flex-start}.sf-slide-has-mermaid .sf-mermaid{flex:none;margin:.4em 0 1em}
 .sf-mermaid{font:16px/1.35 Arial,sans-serif}.sf-mermaid svg{font-family:Arial,sans-serif!important;font-size:16px!important}
+.reveal .sf-slide-inner>table{align-self:flex-start;width:max-content;max-width:100%;table-layout:auto;margin:.35em 0;font-size:.78em}.reveal .sf-slide-inner>table th,.reveal .sf-slide-inner>table td{padding:.18em .55em;vertical-align:top;white-space:normal;overflow-wrap:anywhere}
