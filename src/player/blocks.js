@@ -76,5 +76,6 @@ export function renderContent(source) {
   });
   let html = md(prepared);
   blocks.forEach((block, i) => { html = html.replace(`<p>SLIDEFORGEBLOCK${i}END</p>`, block).replace(`SLIDEFORGEBLOCK${i}END`, block); });
+  html = html.replace(/<table(?:\s[^>]*)?>[\s\S]*?<\/table>/gi, table => `<div class="sf-table-wrap">${table}</div>`);
   return html;
 }

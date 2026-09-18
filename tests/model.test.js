@@ -51,6 +51,12 @@ test('equations render offline with KaTeX markup', () => {
   assert.match(renderContent('$$E = mc^2$$'), /class="katex/);
 });
 
+test('Markdown tables get a content-sized scroll container', () => {
+  const html = renderContent('| Criterio | Pregunta |\n| --- | --- |\n| Claridad | ¿Se entiende qué hacer? |');
+  assert.match(html, /<div class="sf-table-wrap"><table>/);
+  assert.match(html, /<\/table><\/div>/);
+});
+
 test('invalid project options fall back to supported values', () => {
   const value = normalizeProject({ config: { ratio: '20:9', transition: 'spin', branding: { logoMode: 'sometimes' } }, slides: [] });
   assert.equal(value.config.ratio, '16:9');
