@@ -1,0 +1,28 @@
+{
+  "title": "Mi clase",
+  "author": "",
+  "course": "",
+  "institution": "",
+  "theme": "institutional",
+  "transition": "slide",
+  "ratio": "16:9",
+  "controls": true,
+  "progress": true,
+  "slideNumber": true,
+  "customCss": "",
+  "customJs": "",
+  "enableCustomJs": false,
+  "branding": {
+    "logo": "",
+    "logoPosition": "bottom-right",
+    "logoMode": "all",
+    "colors": {
+      "dark": "#3a1467",
+      "primary": "#542e91",
+      "soft": "#644a98",
+      "orange": "#f37121",
+      "yellow": "#ffd54c",
+      "white": "#ffffff"
+    }
+  }
+}
