@@ -25,7 +25,7 @@ export function newSlide(kind = 'content') {
 export function createProject() {
   return {
     version: 1,
-    config: { title: 'Mi clase', author: '', course: '', institution: '', theme: 'institutional', transition: 'slide', ratio: '16:9', controls: true, progress: true, slideNumber: true, branding: { logo: '', logoPosition: 'bottom-right', logoMode: 'all', colors: { ...PALETTE } } },
+    config: { title: 'Mi clase', author: '', course: '', institution: '', theme: 'institutional', transition: 'slide', ratio: '16:9', controls: true, progress: true, slideNumber: true, customCss: '', customJs: '', enableCustomJs: false, branding: { logo: '', logoPosition: 'bottom-right', logoMode: 'all', colors: { ...PALETTE } } },
     slides: [newSlide('cover'), newSlide('content'), newSlide('activity'), newSlide('closing')],
     assets: {}
   };

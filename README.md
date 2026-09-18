@@ -15,6 +15,8 @@ Para generar la aplicación estática: `npm run build`. El resultado está en `d
 
 Edita Markdown o HTML en cada diapositiva. El menú **Insertar** añade ejemplos de componentes. Separa diapositivas importadas de Markdown con `---`. Las notas pueden escribirse en el campo de notas o al final de una diapositiva importada con `Notes:`.
 
+En **Tema y navegación → Avanzado** puedes añadir CSS y JavaScript propios. El JavaScript requiere activar la casilla correspondiente y se ejecuta en la presentación; revísalo antes de activar un proyecto ajeno.
+
 Los bloques interactivos usan esta forma:
 
 ```markdown

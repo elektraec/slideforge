@@ -32,6 +32,9 @@ function logoAllowed(kind, mode) { return mode === 'all' || (mode === 'ends' && 
 async function draw(projectInput) {
   const project = normalizeProject(projectInput);
   const { config, assets } = project;
+  let customStyle = document.querySelector('#slideforge-custom-style');
+  if (!customStyle) { customStyle = document.createElement('style'); customStyle.id = 'slideforge-custom-style'; document.head.append(customStyle); }
+  customStyle.textContent = config.customCss || '';
   document.title = `${config.title || 'Presentación'} · SlideForge`;
   const colors = config.branding.colors;
   const vars = { dark: '--inst-purple-dark', primary: '--inst-purple', soft: '--inst-purple-soft', orange: '--inst-orange', yellow: '--inst-yellow', white: '--inst-white' };
@@ -69,6 +72,10 @@ async function draw(projectInput) {
     } catch (error) { node.textContent = `Error en Mermaid: ${error.message}`; }
   }
   deck.layout();
+  if (config.enableCustomJs && config.customJs) {
+    try { new Function('deck', 'root', 'project', config.customJs)(deck, slideRoot, project); }
+    catch (error) { console.error('SlideForge custom JavaScript:', error); }
+  }
 }
 
 async function queueDraw(project) {
