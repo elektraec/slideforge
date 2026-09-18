@@ -2,6 +2,8 @@
 
 Editor libre de presentaciones docentes interactivas. Usa Reveal.js para las diapositivas, Mermaid para diagramas y una paleta institucional configurable. Funciona sin backend ni API de IA.
 
+Consulta la [guía de Mermaid](docs/GUIA_MERMAID.md) para ver qué diagramas puedes crear y copiar ejemplos a tus diapositivas.
+
 ## Inicio rápido
 
 ```bash
