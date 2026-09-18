@@ -1,0 +1,1 @@
+Coloca aquí `logo-institucional.png` o `logo-institucional.svg` para definir el logo predeterminado de esta instalación. Si no hay archivo, SlideForge funciona sin mostrar una imagen rota. Cada proyecto también puede cargar un logo desde Branding.

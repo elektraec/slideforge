@@ -1,0 +1,23 @@
+{
+  "name": "slideforge",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "predev": "node scripts/build-runtime.mjs",
+    "dev": "vite --host 0.0.0.0",
+    "build": "node scripts/build-runtime.mjs && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "jszip": "^3.10.2",
+    "katex": "^0.18.7",
+    "marked": "^18.0.13",
+    "mermaid": "^11.17.2",
+    "reveal.js": "^6.0.2",
+    "vite": "^8.3.0"
+  }
+}

@@ -1,0 +1,5 @@
+export function generatePrompt(form) {
+  const value = name => form.elements[name]?.value?.trim() || '';
+  const checked = name => form.elements[name]?.checked ? 'sí' : 'no';
+  return `Crea una presentación docente en Markdown compatible con SlideForge.\n\nAsignatura: ${value('course')}\nTema: ${value('topic')}\nNivel: ${value('level')}\nDuración: ${value('duration')}\nNúmero aproximado de diapositivas: ${value('count')}\nObjetivos: ${value('objectives')}\nEstilo: ${value('style')}\nNivel de interactividad: ${value('interaction')}\nIncluir actividades: ${checked('activities')}\nIncluir Mermaid: ${checked('mermaid')}\nIncluir notas del docente: ${checked('notes')}\n\nSepara diapositivas con una línea ---. Usa títulos #, Markdown, tablas y bloques SlideForge cuando correspondan: :::quiz, :::truefalse, :::flashcards, :::tabs, :::accordion, :::sort, :::match, :::slider, :::hotspot y :::mermaid. Cada bloque termina con ::: en una línea. Para notas usa Notes: seguido de líneas de texto al final de cada diapositiva. Evita JavaScript y dependencias externas. El diseño visual final se aplicará automáticamente mediante el tema institucional de SlideForge.`;
+}
