@@ -47,8 +47,8 @@ test('two Mermaid blocks in one slide remain separate diagrams', () => {
   assert.match(html, /data-source="flowchart LR/);
 });
 
-test('equations render offline with KaTeX markup', () => {
-  assert.match(renderContent('$$E = mc^2$$'), /class="katex/);
+test('equations render offline as native MathML', () => {
+  assert.match(renderContent('$$E = mc^2$$'), /<math/);
 });
 
 test('Markdown tables get a content-sized scroll container', () => {

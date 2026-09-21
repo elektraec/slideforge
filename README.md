@@ -43,7 +43,9 @@ Los diagramas aceptan tanto `:::mermaid` como bloques de código Markdown etique
 - **Exportar web ZIP:** contiene `index.html`, el contenido, los activos y el runtime de Reveal.js/Mermaid e interacciones. Descomprímelo en un servidor estático o publícalo en GitHub Pages. Para probarlo localmente, usa `python -m http.server` dentro de la carpeta extraída.
 - **PDF / Imprimir:** abre Reveal.js en modo `?print-pdf`; espera a que cargue la presentación y usa la opción de imprimir/guardar PDF del navegador.
 
-La vista previa, el modo presentar y el ZIP web usan el mismo reproductor. Los datos se guardan automáticamente en el almacenamiento local del navegador. Las imágenes grandes pueden agotar su cuota; exporta el proyecto para una copia portátil.
+La vista previa, el modo presentar y el ZIP web usan el mismo reproductor. La edición de contenido actualiza únicamente la diapositiva modificada; los cambios estructurales o de tema regeneran la presentación completa.
+
+El autosave usa IndexedDB. El documento, las imágenes y el logo se almacenan en registros separados, con migración automática de sesiones antiguas guardadas en `localStorage`. La sección **Recursos** permite reutilizar y eliminar imágenes sin volver a cargarlas. Exporta el proyecto para mantener además una copia portátil.
 
 El logo se carga en **Branding institucional**. No se incluye ningún logo ficticio. Puedes colocar uno en `public/branding/logo-institucional.png` para personalizar una instalación, o cargarlo desde la interfaz para incluirlo en un proyecto concreto.
 
@@ -51,7 +53,7 @@ El logo se carga en **Branding institucional**. No se incluye ningún logo ficti
 
 El workflow `.github/workflows/pages.yml` compila la app y publica `dist/` en GitHub Pages. Activa GitHub Pages con fuente **GitHub Actions** en la configuración del repositorio. La ruta de la app es `https://USUARIO.github.io/slideforge/`. Un ZIP web exportado puede desplegarse en cualquier carpeta estática y embeberse en Canvas LMS mediante un `iframe`.
 
-Las presentaciones ubicadas bajo `public/presentations/` reciben automáticamente el runtime actual durante `npm run dev` y `npm run build`. De este modo, una presentación publicada no conserva versiones antiguas de navegación, Mermaid o estilos.
+Las presentaciones ubicadas bajo `public/presentations/` se enlazan automáticamente al runtime compartido durante `npm run dev` y `npm run build`. De este modo, una presentación publicada no conserva versiones antiguas ni duplica varios megabytes de JavaScript y CSS. Los ZIP web continúan incluyendo su propio runtime para funcionar de manera independiente.
 
 ## Pruebas
 

@@ -1,5 +1,5 @@
-import { access, copyFile, mkdir, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { access, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { join, relative } from 'node:path';
 
 const presentationsRoot = 'public/presentations';
 const runtimeRoot = 'public/runtime';
@@ -22,10 +22,14 @@ async function presentationDirectories(root) {
 
 const directories = await presentationDirectories(presentationsRoot);
 for (const directory of directories) {
-  await mkdir(join(directory, 'js'), { recursive: true });
-  await mkdir(join(directory, 'css'), { recursive: true });
-  await copyFile(join(runtimeRoot, 'player.js'), join(directory, 'js', 'player.js'));
-  await copyFile(join(runtimeRoot, 'player.css'), join(directory, 'css', 'player.css'));
+  const prefix = relative(directory, runtimeRoot).replaceAll('\\', '/');
+  const indexPath = join(directory, 'index.html');
+  const html = (await readFile(indexPath, 'utf8'))
+    .replace(/href="[^"]*(?:css|runtime)\/player\.css"/, `href="${prefix}/player.css"`)
+    .replace(/src="[^"]*(?:js|runtime)\/player\.js"/, `src="${prefix}/player.js"`);
+  await writeFile(indexPath, html);
+  await rm(join(directory, 'js', 'player.js'), { force: true });
+  await rm(join(directory, 'css', 'player.css'), { force: true });
 }
 
-if (directories.length) console.log(`Runtimes sincronizados: ${directories.length}`);
+if (directories.length) console.log(`Presentaciones enlazadas al runtime compartido: ${directories.length}`);

@@ -40,6 +40,39 @@ test('Mermaid and compact Markdown tables render without overflow errors', async
   expect(fits).toBe(true);
 });
 
+test('preview updates one slide and IndexedDB stores resources separately', async ({ page }) => {
+  const preview = await openEditor(page);
+  const before = await preview.locator('body').evaluate(() => ({ ...window.__slideforgeDiagnostics }));
+  await page.locator('#content').fill('# Actualización incremental\n\nContenido editado.');
+  await expect(preview.locator('.slides > section').first().locator('h1')).toContainText('Actualización incremental');
+  const after = await preview.locator('body').evaluate(() => ({ ...window.__slideforgeDiagnostics }));
+  expect(after.fullRenders).toBe(before.fullRenders);
+  expect(after.incrementalRenders).toBeGreaterThan(before.incrementalRenders);
+
+  const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
+  await page.locator('#image-input').setInputFiles({ name: 'pixel.png', mimeType: 'image/png', buffer: pixel });
+  await expect(page.locator('#save-status')).toHaveText('Guardado en este dispositivo');
+  await page.getByRole('button', { name: /Recursos/ }).click();
+  await expect(page.locator('.asset-item')).toContainText('pixel.png');
+
+  const stored = await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => { const request = indexedDB.open('slideforge'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const transaction = db.transaction(['projects', 'resources'], 'readonly');
+    const get = (store, key) => new Promise((resolve, reject) => { const request = transaction.objectStore(store).get(key); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const project = await get('projects', 'current');
+    const resource = await get('resources', 'asset:pixel.png');
+    return { reference: project.assets['pixel.png'], resource };
+  });
+  expect(stored.reference).toEqual({ storage: 'indexeddb', id: 'asset:pixel.png' });
+  expect(stored.resource).toMatch(/^data:image\/png;base64,/);
+
+  await page.reload();
+  await page.getByRole('button', { name: 'Restaurar última sesión' }).click();
+  await expect(page.locator('#content')).toHaveValue(/assets\/pixel\.png/);
+  await page.getByRole('button', { name: /Recursos/ }).click();
+  await expect(page.locator('.asset-item img')).toHaveAttribute('src', /^data:image\/png;base64,/);
+});
+
 test('unsafe HTML is sanitized and imported JavaScript stays disabled', async ({ page }) => {
   const preview = await openEditor(page);
   await page.locator('#content').fill('# Seguridad\n\n<img src="x" onerror="window.__unsafeHtml=true"><script>window.__unsafeScript=true</script>');
@@ -66,6 +99,8 @@ test('unsafe HTML is sanitized and imported JavaScript stays disabled', async ({
 
 test('web ZIP contains the current interactive runtime and portable project files', async ({ page }) => {
   await openEditor(page);
+  const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
+  await page.locator('#image-input').setInputFiles({ name: 'pixel.png', mimeType: 'image/png', buffer: pixel });
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Exportar web ZIP' }).click();
   const download = await downloadPromise;
@@ -73,6 +108,11 @@ test('web ZIP contains the current interactive runtime and portable project file
   for (const path of ['index.html', 'slides.md', 'config.json', 'project.json', 'js/player.js', 'css/player.css']) expect(zip.file(path), path).not.toBeNull();
   expect(await zip.file('js/player.js').async('text')).toContain('sf-navigation-controls');
   expect(await zip.file('css/player.css').async('text')).toContain('sf-navigation-controls');
+  expect(zip.file('assets/pixel.png')).not.toBeNull();
+  const html = await zip.file('index.html').async('text');
+  expect(html).not.toContain('data:image/png');
+  expect(JSON.parse(await zip.file('project.json').async('text')).assets['pixel.png']).toBe('assets/pixel.png');
+  expect((await zip.file('css/player.css').async('text')).length).toBeLessThan(200_000);
 });
 
 test('published presentations use the synchronized current runtime', async ({ page }) => {

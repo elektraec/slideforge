@@ -15,6 +15,7 @@ function filesForProject(project, zip) {
   }
   zip.file('config.json', JSON.stringify(copy.config, null, 2));
   zip.file('project.json', JSON.stringify(copy, null, 2));
+  return copy;
 }
 
 export async function exportProject(project) {
@@ -28,10 +29,11 @@ function embeddedHtml(project) {
 }
 
 export async function exportWeb(project) {
-  const zip = new JSZip(); filesForProject(project, zip);
+  const zip = new JSZip();
+  const portableProject = filesForProject(project, zip);
   const base = import.meta.env.BASE_URL;
   const [js, css] = await Promise.all(['player.js', 'player.css'].map(async file => { const response = await fetch(`${base}runtime/${file}`); if (!response.ok) throw new Error(`No se encontró runtime/${file}`); return response.text(); }));
-  zip.file('index.html', embeddedHtml(project));
+  zip.file('index.html', embeddedHtml(portableProject));
   zip.file('js/player.js', js);
   zip.file('css/player.css', css);
   download(await zip.generateAsync({ type: 'blob' }), `${safeName(project.config.title)}-web.zip`);

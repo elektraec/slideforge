@@ -10,29 +10,54 @@ const root = document.querySelector('#app');
 let project = createProject();
 let selected = 0;
 let previewTimer;
+let persistTimer;
 let fileHandle;
+let imageUploadMode = 'insert';
 const kindNames = { cover: 'Portada', section: 'Separador', content: 'Título + contenido', columns: 'Dos columnas', image: 'Imagen + texto', question: 'Pregunta', activity: 'Actividad', data: 'Datos', quote: 'Cita', conclusions: 'Conclusiones', closing: 'Cierre' };
-const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const $ = selector => root.querySelector(selector);
 const slide = () => project.slides[selected];
 const playerUrl = `${import.meta.env.BASE_URL}player.html`;
 const input = (label, key, value, type = 'text') => `<label>${label}<input data-config="${key}" type="${type}" value="${esc(value)}"></label>`;
 
-root.innerHTML = `<header class="topbar"><div class="brand"><span class="brand-mark">S<span>F</span></span><div><strong>SlideForge</strong><small>Estudio de presentaciones</small></div></div><div class="top-actions"><span id="save-status" aria-live="polite">Sin guardar</span><button id="restore" ${hasLocal() ? '' : 'hidden'}>Restaurar última sesión</button><button id="open-file">Abrir</button><button id="save-file">Guardar</button><button id="present" class="button-primary">Presentar ↗</button></div></header>
+root.innerHTML = `<header class="topbar"><div class="brand"><span class="brand-mark">S<span>F</span></span><div><strong>SlideForge</strong><small>Estudio de presentaciones</small></div></div><div class="top-actions"><span id="save-status" aria-live="polite">Sin guardar</span><button id="restore" hidden>Restaurar última sesión</button><button id="open-file">Abrir</button><button id="save-file">Guardar</button><button id="present" class="button-primary">Presentar ↗</button></div></header>
 <main class="workspace"><aside class="sidebar"><div class="pane-title"><div><span class="eyebrow">PROYECTO</span><h2>Diapositivas <span id="slide-count"></span></h2></div><button id="add-slide" title="Añadir diapositiva" aria-label="Añadir diapositiva">+</button></div><div id="slide-list" class="slide-list"></div><div class="sidebar-bottom"><label class="small-label">Plantilla pedagógica<select id="pedagogical"><option value="">Elegir plantilla…</option>${Object.keys(pedagogical).map(name => `<option>${esc(name)}</option>`).join('')}</select></label><button id="new-project" class="text-button">Nuevo proyecto</button></div></aside>
 <section class="editor-pane"><div class="pane-title editor-title"><div><span class="eyebrow">EDITOR</span><h2 id="current-heading">Contenido</h2></div><span class="badge">Markdown + HTML</span></div><div class="slide-fields"><label>Nombre<input id="slide-name"></label><label>Diseño<select id="slide-kind">${KINDS.map(kind => `<option value="${kind}">${kindNames[kind]}</option>`).join('')}</select></label></div><div class="editor-toolbar"><label>Insertar<select id="insert"><option value="">Componente…</option>${Object.keys(snippets).map(name => `<option>${esc(name)}</option>`).join('')}</select></label><button id="upload-image">Añadir imagen</button><button id="import-content">Importar archivo</button></div><label class="editor-label" for="content">Contenido de la diapositiva</label><textarea id="content" spellcheck="false" aria-label="Contenido Markdown y HTML"></textarea><label class="editor-label" for="notes">Notas del docente</label><textarea id="notes" rows="3" placeholder="Notas visibles en Speaker View"></textarea><p class="editor-hint">Consejo: arrastra aquí imágenes, Markdown o un proyecto .slideforge.zip.</p></section>
 <section class="preview-pane"><div class="pane-title"><div><span class="eyebrow">VISTA PREVIA</span><h2>Presentación</h2></div><button id="open-preview" class="text-button">Abrir ventana ↗</button></div><div class="preview-wrap"><iframe id="preview" title="Vista previa Reveal.js" src="${playerUrl}"></iframe></div><div class="preview-caption"><span class="live-dot"></span> Reveal.js + Mermaid · vista real de exportación</div></section></main>
-<nav class="bottom-bar" aria-label="Herramientas"><button data-panel="branding">Branding</button><button data-panel="settings">Tema y navegación</button><button data-panel="prompt">Generar prompt para IA</button><span class="spacer"></span><button id="export-md">Exportar Markdown</button><button id="export-project">Exportar proyecto</button><button id="export-web" class="button-primary">Exportar web ZIP</button><button id="export-pdf">PDF / Imprimir</button></nav>
+<nav class="bottom-bar" aria-label="Herramientas"><button data-panel="branding">Branding</button><button data-panel="assets">Recursos <span id="asset-count"></span></button><button data-panel="settings">Tema y navegación</button><button data-panel="prompt">Generar prompt para IA</button><span class="spacer"></span><button id="export-md">Exportar Markdown</button><button id="export-project">Exportar proyecto</button><button id="export-web" class="button-primary">Exportar web ZIP</button><button id="export-pdf">PDF / Imprimir</button></nav>
 <dialog id="panel-dialog"><div class="dialog-body"><div class="dialog-head"><h2 id="dialog-title"></h2><button aria-label="Cerrar" class="close">×</button></div><div id="dialog-content"></div></div></dialog>
 <input id="file-input" type="file" accept=".md,.markdown,.txt,.html,.json,.zip,.slideforge.zip,image/*" hidden><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif" hidden><input id="logo-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif" hidden>`;
 
 function setStatus(text) { $('#save-status').textContent = text; }
-function persist() { if (saveLocal(project)) setStatus('Guardado localmente'); else setStatus('Almacenamiento lleno · exporta el proyecto'); $('#restore').hidden = false; }
+function persist() {
+  clearTimeout(persistTimer);
+  setStatus('Guardando…');
+  persistTimer = setTimeout(async () => {
+    const saved = await saveLocal(structuredClone(project));
+    setStatus(saved ? 'Guardado en este dispositivo' : 'No se pudo guardar · exporta el proyecto');
+    if (saved) $('#restore').hidden = false;
+  }, 500);
+}
 function sendPreview() { const frame = $('#preview').contentWindow; frame?.postMessage({ type: 'slideforge:project', project }, location.origin); }
 function refreshPreview() { clearTimeout(previewTimer); previewTimer = setTimeout(sendPreview, 350); }
+function referencedAssets(content) {
+  const result = {};
+  for (const match of content.matchAll(/assets\/([\w.\-]+)/g)) if (project.assets[match[1]]) result[match[1]] = project.assets[match[1]];
+  return result;
+}
+function sendSlidePreview(index = selected) {
+  const current = project.slides[index];
+  $('#preview').contentWindow?.postMessage({ type: 'slideforge:slide-update', index, slide: current, assets: referencedAssets(current.content) }, location.origin);
+}
+function refreshSlidePreview(index = selected) {
+  if (project.config.enableCustomJs) { refreshPreview(); return; }
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(() => sendSlidePreview(index), 180);
+}
 function update() { renderList(); renderFields(); persist(); refreshPreview(); }
 function renderList() {
   $('#slide-count').textContent = project.slides.length;
+  $('#asset-count').textContent = Object.keys(project.assets).length ? `(${Object.keys(project.assets).length})` : '';
   $('#slide-list').innerHTML = project.slides.map((s, i) => `<div class="slide-item ${i === selected ? 'active' : ''}" draggable="true" data-index="${i}"><button class="slide-select" data-action="select" aria-label="Seleccionar diapositiva ${i+1}"><span class="slide-num">${String(i+1).padStart(2,'0')}</span><span class="slide-name">${esc(s.name)}</span><small>${kindNames[s.kind]}</small></button><div class="slide-actions"><button data-action="up" title="Subir" aria-label="Subir">↑</button><button data-action="down" title="Bajar" aria-label="Bajar">↓</button><button data-action="duplicate" title="Duplicar" aria-label="Duplicar">⧉</button><button data-action="delete" title="Eliminar" aria-label="Eliminar">×</button></div></div>`).join('');
 }
 function renderFields() { const s = slide(); $('#current-heading').textContent = s.name; $('#slide-name').value = s.name; $('#slide-kind').value = s.kind; $('#content').value = s.content; $('#notes').value = s.notes; }
@@ -42,7 +67,7 @@ $('#slide-list').addEventListener('click', event => {
   const button = event.target.closest('button[data-action]'); if (!button) return;
   const i = Number(button.closest('.slide-item').dataset.index);
   switch (button.dataset.action) {
-    case 'select': selected = i; update(); break;
+    case 'select': selected = i; renderList(); renderFields(); break;
     case 'up': move(i, i-1); break;
     case 'down': move(i, i+1); break;
     case 'duplicate': { const copy = structuredClone(project.slides[i]); copy.id = crypto.randomUUID(); copy.name += ' (copia)'; project.slides.splice(i+1, 0, copy); selected = i+1; update(); break; }
@@ -54,14 +79,14 @@ $('#slide-list').addEventListener('dragstart', event => { dragged = Number(event
 $('#slide-list').addEventListener('dragover', event => { if (event.target.closest('.slide-item')) event.preventDefault(); });
 $('#slide-list').addEventListener('drop', event => { const target = Number(event.target.closest('.slide-item')?.dataset.index ?? -1); if (dragged >= 0 && target >= 0) { event.preventDefault(); move(dragged, target); } });
 $('#add-slide').onclick = () => { project.slides.splice(selected+1, 0, newSlide()); selected++; update(); };
-$('#slide-name').oninput = event => { slide().name = event.target.value; $('#current-heading').textContent = slide().name; renderList(); persist(); };
-$('#slide-kind').onchange = event => { slide().kind = event.target.value; update(); };
-$('#content').oninput = event => { slide().content = event.target.value; persist(); refreshPreview(); };
-$('#notes').oninput = event => { slide().notes = event.target.value; persist(); refreshPreview(); };
-$('#insert').onchange = event => { const snippet = snippets[event.target.value]; if (!snippet) return; const editor = $('#content'); const pos = editor.selectionStart; editor.setRangeText(`\n\n${snippet}\n`, pos, editor.selectionEnd, 'end'); slide().content = editor.value; event.target.value = ''; editor.focus(); persist(); refreshPreview(); };
+$('#slide-name').oninput = event => { slide().name = event.target.value; $('#current-heading').textContent = slide().name; renderList(); persist(); refreshSlidePreview(); };
+$('#slide-kind').onchange = event => { slide().kind = event.target.value; renderList(); persist(); refreshSlidePreview(); };
+$('#content').oninput = event => { slide().content = event.target.value; persist(); refreshSlidePreview(); };
+$('#notes').oninput = event => { slide().notes = event.target.value; persist(); refreshSlidePreview(); };
+$('#insert').onchange = event => { const snippet = snippets[event.target.value]; if (!snippet) return; const editor = $('#content'); const pos = editor.selectionStart; editor.setRangeText(`\n\n${snippet}\n`, pos, editor.selectionEnd, 'end'); slide().content = editor.value; event.target.value = ''; editor.focus(); persist(); refreshSlidePreview(); };
 $('#pedagogical').onchange = event => { if (!event.target.value) return; if (confirm('¿Reemplazar las diapositivas actuales por esta plantilla?')) { project.slides = templateSlides(event.target.value); selected = 0; update(); } event.target.value = ''; };
 $('#new-project').onclick = () => { if (confirm('¿Crear un proyecto nuevo? Exporta el actual si deseas conservarlo.')) { project = createProject(); selected = 0; update(); } };
-$('#restore').onclick = () => { const saved = loadLocal(); if (saved) { project = normalizeProject(saved); selected = 0; update(); } };
+$('#restore').onclick = async () => { const saved = await loadLocal(); if (saved) { project = normalizeProject(saved); selected = 0; update(); setStatus('Última sesión restaurada'); } };
 $('#open-preview').onclick = () => window.open(playerUrl, '_blank');
 $('#present').onclick = () => window.open(playerUrl, '_blank');
 $('#export-pdf').onclick = () => { const windowRef = window.open(`${playerUrl}?print-pdf`, '_blank'); windowRef?.addEventListener('load', () => windowRef.postMessage({ type: 'slideforge:project', project }, location.origin)); };
@@ -74,9 +99,39 @@ function openPanel(title, html) { $('#dialog-title').textContent = title; $('#di
 $('#panel-dialog .close').onclick = () => $('#panel-dialog').close();
 root.querySelectorAll('[data-panel]').forEach(button => button.onclick = () => {
   if (button.dataset.panel === 'branding') openBranding();
+  if (button.dataset.panel === 'assets') openAssets();
   if (button.dataset.panel === 'settings') openSettings();
   if (button.dataset.panel === 'prompt') openPrompt();
 });
+function resourceSize(value) {
+  if (typeof value !== 'string' || !value.startsWith('data:')) return '';
+  const bytes = Math.max(0, Math.round((value.length - value.indexOf(',') - 1) * .75));
+  return bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+function insertAsset(name) {
+  const editor = $('#content');
+  editor.setRangeText(`\n![Descripción](assets/${name})\n`, editor.selectionStart, editor.selectionEnd, 'end');
+  slide().content = editor.value;
+  persist();
+  refreshSlidePreview();
+}
+function openAssets() {
+  const entries = Object.entries(project.assets);
+  openPanel('Biblioteca de recursos', `<div class="asset-toolbar"><p>${entries.length ? `${entries.length} recurso(s) disponibles para reutilizar.` : 'Todavía no hay imágenes en el proyecto.'}</p><button type="button" id="add-resource">Añadir recurso</button></div><div class="asset-grid">${entries.map(([name, data]) => `<article class="asset-item"><img src="${esc(data)}" alt=""><div><strong>${esc(name)}</strong><small>${resourceSize(data)}</small></div><button type="button" data-asset-insert="${esc(name)}">Insertar</button><button type="button" data-asset-delete="${esc(name)}" class="text-button">Eliminar</button></article>`).join('')}</div>`);
+  $('#add-resource').onclick = () => { imageUploadMode = 'library'; $('#image-input').click(); };
+  $('#dialog-content').onclick = event => {
+    const insert = event.target.closest('[data-asset-insert]');
+    if (insert) { insertAsset(insert.dataset.assetInsert); $('#panel-dialog').close(); return; }
+    const remove = event.target.closest('[data-asset-delete]');
+    if (!remove) return;
+    const name = remove.dataset.assetDelete;
+    const used = project.slides.some(item => item.content.includes(`assets/${name}`));
+    if (used && !confirm('Este recurso está usado en una o más diapositivas. ¿Eliminarlo de todos modos?')) return;
+    delete project.assets[name];
+    update();
+    openAssets();
+  };
+}
 function openBranding() {
   const c = project.config, b = c.branding;
   openPanel('Branding institucional', `<div class="form-grid">${input('Institución', 'institution', c.institution)}${input('Docente', 'author', c.author)}${input('Asignatura', 'course', c.course)}${input('Título del proyecto', 'title', c.title)}</div><div class="form-section"><h3>Logo institucional</h3><div class="logo-preview">${b.logo ? `<img src="${esc(b.logo)}" alt="Vista previa del logo">` : '<span>Sin logo cargado</span>'}</div><button type="button" id="choose-logo">Cargar logo</button><button type="button" id="remove-logo">Quitar logo</button><div class="form-grid"><label>Mostrar logo<select data-brand="logoMode"><option value="all">En todas las slides</option><option value="ends">Solo portada y cierre</option><option value="none">No mostrar</option></select></label><label>Posición<select data-brand="logoPosition"><option value="top-right">Superior derecha</option><option value="top-left">Superior izquierda</option><option value="bottom-right">Inferior derecha</option><option value="bottom-left">Inferior izquierda</option></select></label></div></div><div class="form-section"><h3>Paleta institucional</h3><div class="color-grid">${Object.entries(PALETTE).map(([key]) => `<label>${({dark:'Morado oscuro',primary:'Morado',soft:'Morado suave',orange:'Naranja',yellow:'Amarillo',white:'Blanco'})[key]}<input type="color" data-color="${key}" value="${b.colors[key]}"></label>`).join('')}</div><button type="button" id="reset-colors">Restaurar paleta oficial</button></div>`);
@@ -104,11 +159,29 @@ function openPrompt() {
 }
 
 async function fileData(file) { return await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); }); }
+function uniqueAssetName(original) {
+  const cleaned = original.replace(/[^\w.\-]/g, '-') || 'recurso';
+  if (!project.assets[cleaned]) return cleaned;
+  const dot = cleaned.lastIndexOf('.');
+  const base = dot > 0 ? cleaned.slice(0, dot) : cleaned;
+  const extension = dot > 0 ? cleaned.slice(dot) : '';
+  let counter = 2;
+  while (project.assets[`${base}-${counter}${extension}`]) counter++;
+  return `${base}-${counter}${extension}`;
+}
 async function importFile(file, asLogo = false) {
   if (!file) return;
   const name = file.name.toLowerCase();
   if (asLogo || (file.type.startsWith('image/') && /logo|escudo|emblema/.test(name))) { project.config.branding.logo = await fileData(file); update(); if ($('#panel-dialog').open) openBranding(); return; }
-  if (file.type.startsWith('image/')) { const filename = file.name.replace(/[^\w.\-]/g, '-'); project.assets[filename] = await fileData(file); const editor = $('#content'); editor.setRangeText(`\n![${file.name}](assets/${filename})\n`, editor.selectionStart, editor.selectionEnd, 'end'); slide().content = editor.value; update(); return; }
+  if (file.type.startsWith('image/')) {
+    const filename = uniqueAssetName(file.name);
+    project.assets[filename] = await fileData(file);
+    renderList();
+    persist();
+    if (imageUploadMode === 'insert') insertAsset(filename);
+    if (imageUploadMode === 'library' && $('#panel-dialog').open) openAssets();
+    return;
+  }
   if (name.endsWith('.zip')) { project = await importProjectZip(file); selected = 0; update(); if (project.config.customJs) setStatus('Proyecto importado · JavaScript personalizado desactivado'); return; }
   const text = await file.text();
   if (name.endsWith('.json')) { project = normalizeImportedProject(JSON.parse(text)); selected = 0; update(); if (project.config.customJs) setStatus('Proyecto importado · JavaScript personalizado desactivado'); return; }
@@ -117,17 +190,18 @@ async function importFile(file, asLogo = false) {
   throw new Error('Formato de archivo no compatible.');
 }
 async function handleFiles(files, asLogo = false) { for (const file of files) { try { await importFile(file, asLogo); } catch (error) { alert(`${file.name}: ${error.message}`); } } }
-$('#file-input').onchange = event => handleFiles(event.target.files);
-$('#image-input').onchange = event => handleFiles(event.target.files);
-$('#logo-input').onchange = event => handleFiles(event.target.files, true);
+$('#file-input').onchange = async event => { await handleFiles(event.target.files); event.target.value = ''; };
+$('#image-input').onchange = async event => { await handleFiles(event.target.files); imageUploadMode = 'insert'; event.target.value = ''; };
+$('#logo-input').onchange = async event => { await handleFiles(event.target.files, true); event.target.value = ''; };
 $('#open-file').onclick = async () => { if (window.showOpenFilePicker) { try { const [handle] = await showOpenFilePicker({ types: [{ description: 'SlideForge y contenido', accept: { 'application/zip': ['.zip'], 'text/plain': ['.md','.markdown','.txt','.html','.json'] } }] }); const file = await handle.getFile(); fileHandle = /\.md$|\.markdown$/i.test(file.name) ? handle : undefined; await handleFiles([file]); return; } catch (error) { if (error.name === 'AbortError') return; } } $('#file-input').click(); };
 $('#import-content').onclick = () => $('#file-input').click();
-$('#upload-image').onclick = () => $('#image-input').click();
+$('#upload-image').onclick = () => { imageUploadMode = 'insert'; $('#image-input').click(); };
 $('#save-file').onclick = async () => { if (window.showSaveFilePicker) { try { fileHandle ||= await showSaveFilePicker({ suggestedName: 'slides.md', types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md'] } }] }); const writable = await fileHandle.createWritable(); await writable.write(serializeMarkdown(project)); await writable.close(); setStatus('Archivo guardado'); return; } catch (error) { if (error.name === 'AbortError') return; } } downloadText(serializeMarkdown(project), 'slides.md', 'text/markdown'); };
 document.addEventListener('dragover', event => { if (event.dataTransfer?.types.includes('Files')) { event.preventDefault(); document.body.classList.add('dragging-file'); } });
 document.addEventListener('dragleave', event => { if (!event.relatedTarget) document.body.classList.remove('dragging-file'); });
 document.addEventListener('drop', event => { if (event.dataTransfer?.files.length) { event.preventDefault(); document.body.classList.remove('dragging-file'); handleFiles(event.dataTransfer.files); } });
 renderList(); renderFields(); sendPreview();
+hasLocal().then(value => { $('#restore').hidden = !value; });
 async function loadInstalledLogo() {
   if (project.config.branding.logo) return;
   for (const name of ['logo-institucional.png', 'logo-institucional.svg']) {

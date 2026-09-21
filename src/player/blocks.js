@@ -13,7 +13,7 @@ const md = value => {
   const equations = [];
   const prepared = String(value || '').replace(/\$\$([\s\S]+?)\$\$|(?<!\$)\$([^\n$]+)\$(?!\$)/g, (_, display, inline) => {
     const token = `SLIDEFORGEMATH${equations.length}END`;
-    try { equations.push(katex.renderToString(display || inline, { displayMode: !!display, throwOnError: false })); }
+    try { equations.push(katex.renderToString(display || inline, { displayMode: !!display, throwOnError: false, output: 'mathml' })); }
     catch { equations.push(esc(display || inline)); }
     return token;
   });

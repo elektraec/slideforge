@@ -1,5 +1,4 @@
 import Reveal from 'reveal.js';
-import RevealMarkdown from 'reveal.js/plugin/markdown';
 import RevealHighlight from 'reveal.js/plugin/highlight';
 import RevealNotes from 'reveal.js/plugin/notes';
 import RevealSearch from 'reveal.js/plugin/search';
@@ -12,7 +11,6 @@ import { mountInteractions } from './interactions.js';
 import { normalizeProject } from '../model.js';
 import 'reveal.js/reveal.css';
 import 'reveal.js/plugin/highlight/monokai.css';
-import 'katex/dist/katex.min.css';
 import '../styles/theme-institutional.css';
 
 const slideRoot = document.querySelector('#slides');
@@ -20,6 +18,8 @@ const revealRoot = document.querySelector('.reveal');
 let deck;
 let rendering = false;
 let pendingProject;
+const pendingSlideUpdates = new Map();
+let currentProject;
 let mermaidSerial = 0;
 let activeSlideCount = 0;
 mountInteractions(slideRoot);
@@ -30,6 +30,59 @@ function assetContent(content, assets) {
 }
 
 function logoAllowed(kind, mode) { return mode === 'all' || (mode === 'ends' && (kind === 'cover' || kind === 'closing')); }
+
+function renderSection(section, slide, project) {
+  const { config, assets } = project;
+  section.className = `sf-slide sf-slide-${slide.kind}`;
+  section.innerHTML = `<div class="sf-slide-inner">${renderContent(assetContent(slide.content, assets))}</div>`;
+  if (section.querySelector('.sf-mermaid')) section.classList.add('sf-slide-has-mermaid');
+  if (config.branding.logo && logoAllowed(slide.kind, config.branding.logoMode)) {
+    const img = document.createElement('img');
+    img.className = `sf-logo sf-logo-${config.branding.logoPosition}`;
+    img.src = config.branding.logo;
+    img.alt = config.institution ? `Logo de ${config.institution}` : 'Logo institucional';
+    section.append(img);
+  }
+  if (slide.notes) {
+    const aside = document.createElement('aside');
+    aside.className = 'notes';
+    aside.textContent = slide.notes;
+    section.append(aside);
+  }
+}
+
+async function renderMermaid(scope, slideWidth) {
+  for (const node of scope.querySelectorAll('.sf-mermaid')) {
+    try {
+      const id = `sfmermaid${++mermaidSerial}`;
+      const source = prepareMermaidSource(node.dataset.source);
+      const flowchart = /^\s*(?:flowchart|graph)\b/i.test(source);
+      if (flowchart) node.classList.add('sf-mermaid-flowchart');
+      const result = await mermaid.render(id, source);
+      node.innerHTML = result.svg;
+      const svg = node.querySelector('svg');
+      if (svg) {
+        if (!svg.hasAttribute('viewBox')) {
+          const width = Number.parseFloat(svg.getAttribute('width'));
+          const height = Number.parseFloat(svg.getAttribute('height'));
+          if (width > 0 && height > 0) svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        }
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        const viewBox = svg.getAttribute('viewBox')?.trim().split(/[\s,]+/).map(Number);
+        if (flowchart && viewBox?.length === 4) {
+          const fitted = fitDiagram(viewBox[2], viewBox[3], Math.min(slideWidth * 0.78, 900), 460);
+          if (fitted) svg.style.setProperty('--sf-diagram-width', `${fitted.width}px`);
+        }
+      }
+      result.bindFunctions?.(node);
+    } catch (error) {
+      node.textContent = `Error en Mermaid: ${error.message}`;
+      console.error('SlideForge Mermaid:', error);
+    }
+  }
+}
 
 function mountNavigationControls(config, slideCount) {
   revealRoot.querySelector('.sf-navigation-controls')?.remove();
@@ -67,8 +120,11 @@ function mountNavigationControls(config, slideCount) {
 
 async function draw(projectInput) {
   const project = normalizeProject(projectInput);
-  const { config, assets } = project;
+  currentProject = project;
+  const { config } = project;
   activeSlideCount = project.slides.length;
+  window.__slideforgeDiagnostics ||= { fullRenders: 0, incrementalRenders: 0 };
+  window.__slideforgeDiagnostics.fullRenders++;
   let customStyle = document.querySelector('#slideforge-custom-style');
   if (!customStyle) { customStyle = document.createElement('style'); customStyle.id = 'slideforge-custom-style'; document.head.append(customStyle); }
   customStyle.textContent = config.customCss || '';
@@ -80,56 +136,12 @@ async function draw(projectInput) {
   slideRoot.innerHTML = '';
   project.slides.forEach(slide => {
     const section = document.createElement('section');
-    section.className = `sf-slide sf-slide-${slide.kind}`;
-    section.innerHTML = `<div class="sf-slide-inner">${renderContent(assetContent(slide.content, assets))}</div>`;
-    if (section.querySelector('.sf-mermaid')) section.classList.add('sf-slide-has-mermaid');
-    if (config.branding.logo && logoAllowed(slide.kind, config.branding.logoMode)) {
-      const img = document.createElement('img');
-      img.className = `sf-logo sf-logo-${config.branding.logoPosition}`;
-      img.src = config.branding.logo;
-      img.alt = config.institution ? `Logo de ${config.institution}` : 'Logo institucional';
-      section.append(img);
-    }
-    if (slide.notes) {
-      const aside = document.createElement('aside');
-      aside.className = 'notes';
-      aside.textContent = slide.notes;
-      section.append(aside);
-    }
+    renderSection(section, slide, project);
     slideRoot.append(section);
   });
   const width = config.ratio === '4:3' ? 960 : 1280;
-  for (const node of slideRoot.querySelectorAll('.sf-mermaid')) {
-    try {
-      const id = `sfmermaid${++mermaidSerial}`;
-      const source = prepareMermaidSource(node.dataset.source);
-      const flowchart = /^\s*(?:flowchart|graph)\b/i.test(source);
-      if (flowchart) node.classList.add('sf-mermaid-flowchart');
-      const result = await mermaid.render(id, source);
-      node.innerHTML = result.svg;
-      const svg = node.querySelector('svg');
-      if (svg) {
-        if (!svg.hasAttribute('viewBox')) {
-          const width = Number.parseFloat(svg.getAttribute('width'));
-          const height = Number.parseFloat(svg.getAttribute('height'));
-          if (width > 0 && height > 0) svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-        }
-        svg.removeAttribute('width');
-        svg.removeAttribute('height');
-        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-        const viewBox = svg.getAttribute('viewBox')?.trim().split(/[\s,]+/).map(Number);
-        if (flowchart && viewBox?.length === 4) {
-          const fitted = fitDiagram(viewBox[2], viewBox[3], Math.min(width * 0.78, 900), 460);
-          if (fitted) svg.style.setProperty('--sf-diagram-width', `${fitted.width}px`);
-        }
-      }
-      result.bindFunctions?.(node);
-    } catch (error) {
-      node.textContent = `Error en Mermaid: ${error.message}`;
-      console.error('SlideForge Mermaid:', error);
-    }
-  }
-  deck = new Reveal(revealRoot, { width, height: 720, margin: 0.06, minScale: 0.2, maxScale: 2, controls: false, progress: !!config.progress, slideNumber: !!config.slideNumber, transition: config.transition, hash: !window.frameElement, plugins: [RevealMarkdown, RevealHighlight, RevealNotes, RevealSearch, RevealZoom] });
+  await renderMermaid(slideRoot, width);
+  deck = new Reveal(revealRoot, { width, height: 720, margin: 0.06, minScale: 0.2, maxScale: 2, controls: false, progress: !!config.progress, slideNumber: !!config.slideNumber, transition: config.transition, hash: !window.frameElement, plugins: [RevealHighlight, RevealNotes, RevealSearch, RevealZoom] });
   await deck.initialize();
   mountNavigationControls(config, project.slides.length);
   deck.layout();
@@ -139,21 +151,52 @@ async function draw(projectInput) {
   }
 }
 
-async function queueDraw(project) {
-  pendingProject = project;
+async function patchSlide({ index, slide, assets = {} }) {
+  if (!deck || !currentProject || !currentProject.slides[index]) return;
+  Object.assign(currentProject.assets, assets);
+  currentProject.slides[index] = { ...currentProject.slides[index], ...slide };
+  const section = slideRoot.children[index];
+  if (!section) return;
+  const state = ['past', 'present', 'future'].filter(name => section.classList.contains(name));
+  const indices = deck.getIndices();
+  renderSection(section, currentProject.slides[index], currentProject);
+  section.classList.add(...state);
+  const width = currentProject.config.ratio === '4:3' ? 960 : 1280;
+  await renderMermaid(section, width);
+  deck.sync();
+  deck.slide(indices.h, indices.v, indices.f);
+  deck.layout();
+  window.__slideforgeDiagnostics ||= { fullRenders: 0, incrementalRenders: 0 };
+  window.__slideforgeDiagnostics.incrementalRenders++;
+}
+
+async function processQueue() {
   if (rendering) return;
   rendering = true;
-  while (pendingProject) {
-    const next = pendingProject;
-    pendingProject = null;
-    try { await draw(next); } catch (error) { slideRoot.textContent = error.message; }
+  while (pendingProject || pendingSlideUpdates.size) {
+    try {
+      if (pendingProject) {
+        const next = pendingProject;
+        pendingProject = null;
+        pendingSlideUpdates.clear();
+        await draw(next);
+      } else {
+        const [index, update] = pendingSlideUpdates.entries().next().value;
+        pendingSlideUpdates.delete(index);
+        await patchSlide(update);
+      }
+    } catch (error) { console.error('SlideForge preview:', error); }
   }
   rendering = false;
 }
 
+function queueDraw(project) { pendingProject = project; processQueue(); }
+function queueSlideUpdate(update) { pendingSlideUpdates.set(update.index, update); processQueue(); }
+
 window.addEventListener('message', event => {
-  if (event.origin !== location.origin || event.data?.type !== 'slideforge:project') return;
-  queueDraw(event.data.project);
+  if (event.origin !== location.origin) return;
+  if (event.data?.type === 'slideforge:project') queueDraw(event.data.project);
+  if (event.data?.type === 'slideforge:slide-update') queueSlideUpdate(event.data);
 });
 
 const embedded = document.querySelector('#slideforge-project');
