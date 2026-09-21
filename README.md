@@ -47,6 +47,12 @@ La vista previa, el modo presentar y el ZIP web usan el mismo reproductor. La ed
 
 El autosave usa IndexedDB. El documento, las imágenes y el logo se almacenan en registros separados, con migración automática de sesiones antiguas guardadas en `localStorage`. La sección **Recursos** permite reutilizar y eliminar imágenes sin volver a cargarlas. Exporta el proyecto para mantener además una copia portátil.
 
+El botón **Editor visual** permite insertar o modificar componentes `quiz`, `truefalse`, `flashcards`, `tabs`, `accordion`, `sort`, `match`, `slider`, `mermaid`, `iframe` y respuestas sin escribir manualmente la sintaxis. La barra superior incorpora deshacer y rehacer mediante botones o `Ctrl+Z` / `Ctrl+Y`.
+
+La barra lateral incluye miniaturas y búsqueda por nombre, contenido o notas. **Diagnóstico** identifica slides con contenido horizontal o vertical fuera del área visible y combina estimaciones inmediatas con las medidas reales del preview. **Guardar y publicar** explica el flujo de autoguardado, proyecto portable, web ZIP, PDF y publicación estática.
+
+El reproductor mantiene explícitamente la vista de diapositivas de Reveal.js, incluso dentro de previews e iframes estrechos, para conservar la navegación mediante botones, `←`, `→`, `Home` y `End`.
+
 El logo se carga en **Branding institucional**. No se incluye ningún logo ficticio. Puedes colocar uno en `public/branding/logo-institucional.png` para personalizar una instalación, o cargarlo desde la interfaz para incluirlo en un proyecto concreto.
 
 ## Publicación

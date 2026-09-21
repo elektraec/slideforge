@@ -11,3 +11,10 @@
 .sf-navigation-controls{position:fixed;right:18px;bottom:18px;z-index:100;display:flex;align-items:center;gap:5px;padding:5px;border:1px solid #ead9cc;border-radius:999px;background:#fffffff2;box-shadow:0 4px 18px #30154b2b;backdrop-filter:blur(6px)}.sf-navigation-controls button{min-width:42px;height:36px;border:0;border-radius:999px;padding:0 10px;background:transparent;color:var(--inst-purple-dark);font:750 13px/1 Inter,"Segoe UI",Arial,sans-serif;cursor:pointer}.sf-navigation-controls button:first-child,.sf-navigation-controls button:last-child{color:var(--inst-orange);font-size:22px}.sf-navigation-controls button:hover:not(:disabled){background:#fff0e6}.sf-navigation-controls button:focus-visible{outline:3px solid var(--inst-orange);outline-offset:2px}.sf-navigation-controls button:active:not(:disabled){transform:translateY(1px)}.sf-navigation-controls button:disabled{opacity:.3;cursor:default}
 @media(max-width:700px){.sf-navigation-controls{right:9px;bottom:9px;gap:2px;padding:3px}.sf-navigation-controls button{min-width:34px;height:32px;padding:0 6px;font-size:11px}.sf-navigation-controls button:first-child,.sf-navigation-controls button:last-child{font-size:19px}}
 @media print{.sf-navigation-controls{display:none!important}}
+.reveal .sf-card,.reveal .sf-quiz,.reveal .sf-match{width:100%;max-width:100%;min-width:0;overflow-wrap:anywhere}
+.reveal .sf-options{width:100%;min-width:0}
+.reveal .sf-options button{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal}
+.reveal .sf-match label{display:grid;grid-template-columns:minmax(0,1fr) minmax(9em,55%);align-items:center;gap:.5em;min-width:0}
+.reveal .sf-match label>span{min-width:0;overflow-wrap:anywhere}
+.reveal .sf-match select{width:100%;max-width:100%;min-width:0;white-space:normal}
+@media(max-width:700px){.reveal .sf-match label{grid-template-columns:1fr}.reveal .sf-match select{width:100%}}

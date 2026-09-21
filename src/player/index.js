@@ -22,6 +22,8 @@ const pendingSlideUpdates = new Map();
 let currentProject;
 let mermaidSerial = 0;
 let activeSlideCount = 0;
+let lastProjectSignature = '';
+let lastProjectRevision = -1;
 mountInteractions(slideRoot);
 mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'base', fontFamily: 'Arial, sans-serif', fontSize: '16px', markdownAutoWrap: true, flowchart: { wrappingWidth: 180 }, timeline: { useMaxWidth: true }, themeVariables: { primaryColor: '#f4effa', primaryTextColor: '#3a1467', primaryBorderColor: '#542e91', lineColor: '#f37121' } });
 
@@ -30,6 +32,9 @@ function assetContent(content, assets) {
 }
 
 function logoAllowed(kind, mode) { return mode === 'all' || (mode === 'ends' && (kind === 'cover' || kind === 'closing')); }
+function goToEnd() {
+  deck?.slide(Math.max(0, activeSlideCount - 1), 0, 0);
+}
 
 function renderSection(section, slide, project) {
   const { config, assets } = project;
@@ -100,11 +105,18 @@ function mountNavigationControls(config, slideCount) {
     if (action === 'previous') deck.prev();
     if (action === 'next') deck.next();
     if (action === 'home') deck.slide(0, 0, 0);
-    if (action === 'end') deck.slide(Math.max(0, slideCount - 1), 0, 0);
+    if (action === 'end') goToEnd();
   };
   controls.addEventListener('click', event => {
     const button = event.target.closest('button[data-nav]');
     if (button) go(button.dataset.nav);
+  });
+  controls.addEventListener('keydown', event => {
+    const actions = { ArrowLeft: 'previous', ArrowRight: 'next', Home: 'home', End: 'end' };
+    if (!actions[event.key]) return;
+    event.preventDefault();
+    event.stopPropagation();
+    go(actions[event.key]);
   });
   const update = () => {
     const index = deck?.getIndices().h || 0;
@@ -117,6 +129,31 @@ function mountNavigationControls(config, slideCount) {
   revealRoot.append(controls);
   update();
 }
+
+function reportOverflow() {
+  const overflow = [...slideRoot.children].map((section, index) => {
+    const inner = section.querySelector('.sf-slide-inner');
+    if (!inner) return null;
+    const bounds = section.getBoundingClientRect();
+    const childBoxes = [...inner.children].map(element => ({ element, box: element.getBoundingClientRect() }));
+    const horizontal = section.scrollWidth > section.clientWidth + 3 || inner.scrollWidth > inner.clientWidth + 3 || childBoxes.some(({ box }) => box.right > bounds.right + 3 || box.left < bounds.left - 3);
+    const vertical = section.scrollHeight > section.clientHeight + 3 || inner.scrollHeight > inner.clientHeight + 3 || childBoxes.some(({ box }) => box.bottom > bounds.bottom + 3 || box.top < bounds.top - 3);
+    section.toggleAttribute('data-content-overflow', horizontal || vertical);
+    if (!horizontal && !vertical) return null;
+    const elements = childBoxes.filter(({ box }) => {
+      return box.right > bounds.right + 3 || box.bottom > bounds.bottom + 3 || box.left < bounds.left - 3;
+    }).slice(0, 4).map(({ element }) => element.getAttribute('aria-label') || element.className?.toString().split(' ')[0] || element.tagName.toLowerCase());
+    return { index, horizontal, vertical, elements };
+  }).filter(Boolean);
+  window.__slideforgeOverflow = overflow;
+  if (window.parent !== window) window.parent.postMessage({ type: 'slideforge:diagnostics', overflow }, location.origin);
+}
+
+function scheduleOverflowReport() {
+  requestAnimationFrame(() => requestAnimationFrame(reportOverflow));
+  document.fonts?.ready.then(reportOverflow);
+}
+window.addEventListener('resize', scheduleOverflowReport);
 
 async function draw(projectInput) {
   const project = normalizeProject(projectInput);
@@ -141,10 +178,11 @@ async function draw(projectInput) {
   });
   const width = config.ratio === '4:3' ? 960 : 1280;
   await renderMermaid(slideRoot, width);
-  deck = new Reveal(revealRoot, { width, height: 720, margin: 0.06, minScale: 0.2, maxScale: 2, controls: false, progress: !!config.progress, slideNumber: !!config.slideNumber, transition: config.transition, hash: !window.frameElement, plugins: [RevealHighlight, RevealNotes, RevealSearch, RevealZoom] });
+  deck = new Reveal(revealRoot, { view: 'slide', scrollActivationWidth: null, width, height: 720, margin: 0.06, minScale: 0.2, maxScale: 2, controls: false, progress: !!config.progress, slideNumber: !!config.slideNumber, transition: config.transition, hash: !window.frameElement, plugins: [RevealHighlight, RevealNotes, RevealSearch, RevealZoom] });
   await deck.initialize();
   mountNavigationControls(config, project.slides.length);
   deck.layout();
+  scheduleOverflowReport();
   if (config.enableCustomJs && config.customJs) {
     try { new Function('deck', 'root', 'project', config.customJs)(deck, slideRoot, project); }
     catch (error) { console.error('SlideForge custom JavaScript:', error); }
@@ -168,6 +206,8 @@ async function patchSlide({ index, slide, assets = {} }) {
   deck.layout();
   window.__slideforgeDiagnostics ||= { fullRenders: 0, incrementalRenders: 0 };
   window.__slideforgeDiagnostics.incrementalRenders++;
+  lastProjectSignature = JSON.stringify(currentProject);
+  scheduleOverflowReport();
 }
 
 async function processQueue() {
@@ -190,13 +230,25 @@ async function processQueue() {
   rendering = false;
 }
 
-function queueDraw(project) { pendingProject = project; processQueue(); }
+function queueDraw(project, revision) {
+  if (Number.isInteger(revision) && revision === lastProjectRevision) return;
+  const signature = JSON.stringify(project);
+  if (signature === lastProjectSignature) return;
+  if (Number.isInteger(revision)) lastProjectRevision = revision;
+  lastProjectSignature = signature;
+  pendingProject = project;
+  processQueue();
+}
 function queueSlideUpdate(update) { pendingSlideUpdates.set(update.index, update); processQueue(); }
 
 window.addEventListener('message', event => {
   if (event.origin !== location.origin) return;
-  if (event.data?.type === 'slideforge:project') queueDraw(event.data.project);
+  if (event.data?.type === 'slideforge:project') queueDraw(event.data.project, event.data.revision);
   if (event.data?.type === 'slideforge:slide-update') queueSlideUpdate(event.data);
+  if (event.data?.type === 'slideforge:navigate') {
+    const actions = { ArrowLeft: () => deck?.prev(), ArrowRight: () => deck?.next(), Home: () => deck?.slide(0, 0, 0), End: goToEnd };
+    actions[event.data.key]?.();
+  }
 });
 
 const embedded = document.querySelector('#slideforge-project');
@@ -210,13 +262,13 @@ if (embedded) {
 
 window.addEventListener('keydown', event => {
   const target = event.target;
-  const editing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target instanceof HTMLButtonElement || target?.isContentEditable;
+  const editing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target?.isContentEditable;
   if (editing || event.ctrlKey || event.metaKey || event.altKey) return;
   const actions = {
     ArrowLeft: () => deck?.prev(),
     ArrowRight: () => deck?.next(),
     Home: () => deck?.slide(0, 0, 0),
-    End: () => deck?.slide(Math.max(0, activeSlideCount - 1), 0, 0)
+    End: goToEnd
   };
   if (actions[event.key]) {
     event.preventDefault();

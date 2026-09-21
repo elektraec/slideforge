@@ -41,7 +41,7 @@ export function renderBlock(type, body) {
     case 'sort': return `<div class="sf-card sf-sort" data-order="${esc(items(body).join('|'))}"><p>Ordena los elementos con los botones ↑ y ↓.</p><ol>${items(body).reverse().map(item => `<li>${esc(item)} <button type="button" data-move="up" aria-label="Subir">↑</button><button type="button" data-move="down" aria-label="Bajar">↓</button></li>`).join('')}</ol><button type="button" data-check>Comprobar</button><p class="sf-feedback" role="status"></p></div>`;
     case 'match': {
       const pairs = items(body).map(item => item.split('|'));
-      return `<div class="sf-card sf-match"><p>Relaciona cada concepto con su definición.</p>${pairs.map(([a], i) => `<label>${esc(a)} <select data-answer="${i}"><option value="">Seleccionar…</option>${pairs.map(([, b], j) => `<option value="${j}">${esc(b || '')}</option>`).join('')}</select></label>`).join('')}<button type="button" data-check>Comprobar</button><p class="sf-feedback" role="status"></p></div>`;
+      return `<div class="sf-card sf-match"><p>Relaciona cada concepto con su definición.</p>${pairs.map(([a], i) => `<label><span>${esc(a)}</span><select data-answer="${i}"><option value="">Seleccionar…</option>${pairs.map(([, b], j) => `<option value="${j}">${esc(b || '')}</option>`).join('')}</select></label>`).join('')}<button type="button" data-check>Comprobar</button><p class="sf-feedback" role="status"></p></div>`;
     }
     case 'slider': {
       const min = Number(field(body, 'min', '0')), max = Number(field(body, 'max', '100')), value = Number(field(body, 'value', String(min)));
