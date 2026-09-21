@@ -30,6 +30,19 @@ function assetContent(content, assets) {
 
 function logoAllowed(kind, mode) { return mode === 'all' || (mode === 'ends' && (kind === 'cover' || kind === 'closing')); }
 
+function mountHomeControl(config) {
+  revealRoot.querySelector('.sf-home-control')?.remove();
+  if (!config.controls) return;
+  const button = document.createElement('button');
+  button.className = 'sf-home-control';
+  button.type = 'button';
+  button.title = 'Volver a la primera diapositiva';
+  button.setAttribute('aria-label', 'Volver a la primera diapositiva');
+  button.innerHTML = '<span aria-hidden="true">⌂</span><span>Inicio</span>';
+  button.addEventListener('click', () => deck?.slide(0, 0, 0));
+  revealRoot.append(button);
+}
+
 async function draw(projectInput) {
   const project = normalizeProject(projectInput);
   const { config, assets } = project;
@@ -95,6 +108,7 @@ async function draw(projectInput) {
   }
   deck = new Reveal(revealRoot, { width, height: 720, margin: 0.06, minScale: 0.2, maxScale: 2, controls: !!config.controls, progress: !!config.progress, slideNumber: !!config.slideNumber, transition: config.transition, hash: !window.frameElement, plugins: [RevealMarkdown, RevealHighlight, RevealNotes, RevealSearch, RevealZoom] });
   await deck.initialize();
+  mountHomeControl(config);
   deck.layout();
   if (config.enableCustomJs && config.customJs) {
     try { new Function('deck', 'root', 'project', config.customJs)(deck, slideRoot, project); }
