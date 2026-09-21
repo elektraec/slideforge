@@ -35,8 +35,11 @@ export function mountInteractions(root) {
     }
     const match = button.closest('.sf-match');
     if (match && button.hasAttribute('data-check')) {
-      const fields = [...match.querySelectorAll('select')];
-      match.querySelector('.sf-feedback').textContent = fields.every(select => select.value === select.dataset.answer) ? '¡Todas las relaciones son correctas!' : 'Hay relaciones por revisar.';
+      const classification = match.dataset.mode === 'classification';
+      const correct = classification
+        ? [...match.querySelectorAll('.sf-match-item')].every(item => item.querySelector('input:checked')?.value === item.dataset.answer)
+        : [...match.querySelectorAll('select')].every(select => select.value === select.dataset.answer);
+      match.querySelector('.sf-feedback').textContent = correct ? '¡Todas las relaciones son correctas!' : 'Hay relaciones por revisar.';
     }
     const hotspot = button.closest('.sf-hotspot');
     if (hotspot) hotspot.querySelector('.sf-feedback').textContent = `${button.getAttribute('aria-label')}: ${button.dataset.info}`;
@@ -48,6 +51,7 @@ export function mountInteractions(root) {
     if (calculator) calculator.querySelector('output').textContent = String(Number(event.target.value) * Number(calculator.querySelector('small').textContent.split('×')[1]));
   });
   root.addEventListener('submit', event => {
+    if (event.target.matches('.sf-match')) event.preventDefault();
     if (event.target.matches('.sf-form')) { event.preventDefault(); event.target.querySelector('.sf-feedback').textContent = 'Respuesta registrada en esta sesión.'; }
   });
 }

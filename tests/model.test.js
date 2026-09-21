@@ -26,6 +26,32 @@ test('interactive syntax renders real controls and Mermaid source', () => {
   assert.match(html, /flowchart LR/);
 });
 
+test('traditional match keeps selects and semantic answer values', () => {
+  const html = renderContent(':::match\n- Capital de Ecuador | Quito\n- Capital de Perú | Lima\n:::');
+  assert.match(html, /data-mode="traditional"/);
+  assert.equal((html.match(/<select/g) || []).length, 2);
+  assert.match(html, /data-answer="Quito"/);
+  assert.match(html, /option value="Lima"/);
+  assert.doesNotMatch(html, /data-answer="0"/);
+});
+
+test('match with repeated answers becomes two-category classification', () => {
+  const html = renderContent(':::match\n- Color | UI\n- Iconos | UI\n- Confianza | UX\n- Facilidad | UX\n:::');
+  assert.match(html, /data-mode="classification"/);
+  assert.equal((html.match(/<fieldset/g) || []).length, 4);
+  assert.equal((html.match(/value="UI"/g) || []).length, 4);
+  assert.equal((html.match(/value="UX"/g) || []).length, 4);
+  assert.doesNotMatch(html, /<select/);
+});
+
+test('classification supports three or more unique categories', () => {
+  const html = renderContent(':::match\n- Botón | UI\n- Confianza | UX\n- Tiempo de carga | Rendimiento\n- Iconos | UI\n:::');
+  assert.match(html, /data-mode="classification"/);
+  assert.equal((html.match(/<fieldset/g) || []).length, 4);
+  assert.equal((html.match(/name="match-0"/g) || []).length, 3);
+  assert.match(html, /value="Rendimiento"/);
+});
+
 test('standard Mermaid fenced code becomes a diagram', () => {
   const html = renderContent('# Flujo\n\n```mermaid\nflowchart LR\n A --> B\n```');
   assert.match(html, /class="sf-mermaid"/);

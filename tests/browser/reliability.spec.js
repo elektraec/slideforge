@@ -182,3 +182,55 @@ feedback: Correcto.
   await expect(page.locator('#overflow-alert')).toBeHidden();
   await expect(page.locator('#diagnostic-count')).toHaveText('');
 });
+
+test('classification match validates answer values after category reordering', async ({ page }) => {
+  const preview = await openEditor(page);
+  await page.locator('#content').fill(`:::match
+pairs:
+- Color del botón | UI
+- Tamaño de los íconos | UI
+- Confianza al usar la aplicación | UX
+- Facilidad para completar una tarea | UX
+:::`);
+  const match = preview.locator('.sf-match[data-mode="classification"]');
+  await expect(match.locator('fieldset')).toHaveCount(4);
+  await match.locator('.sf-match-categories').evaluateAll(groups => groups.forEach(group => [...group.children].reverse().forEach(child => group.append(child))));
+  for (const [index, answer] of ['UI', 'UI', 'UX', 'UX'].entries()) await match.locator('fieldset').nth(index).getByLabel(answer, { exact: true }).check();
+  await match.getByRole('button', { name: 'Comprobar' }).click();
+  await expect(match.locator('.sf-feedback')).toHaveText('¡Todas las relaciones son correctas!');
+});
+
+test('classification match supports three categories', async ({ page }) => {
+  const preview = await openEditor(page);
+  await page.locator('#content').fill(`:::match
+- Botón principal | UI
+- Confianza | UX
+- Tiempo de carga | Rendimiento
+- Iconografía | UI
+:::`);
+  const match = preview.locator('.sf-match[data-mode="classification"]');
+  await expect(match.locator('fieldset').first().locator('input')).toHaveCount(3);
+  await expect(match.getByLabel('Rendimiento', { exact: true })).toHaveCount(4);
+});
+
+test('classification radios support keyboard navigation and selection', async ({ page }) => {
+  const preview = await openEditor(page);
+  await page.locator('#content').fill(`:::match
+- Color del botón | UI
+- Tamaño de los íconos | UI
+- Confianza | UX
+- Facilidad | UX
+:::`);
+  const match = preview.locator('.sf-match[data-mode="classification"]');
+  const first = match.locator('fieldset').first();
+  const ui = first.getByLabel('UI', { exact: true });
+  await ui.focus();
+  await ui.press('Space');
+  await expect(ui).toBeChecked();
+  await ui.press('ArrowRight');
+  await expect(first.getByLabel('UX', { exact: true })).toBeChecked();
+  await first.getByLabel('UX', { exact: true }).press('ArrowLeft');
+  await expect(ui).toBeChecked();
+  await ui.press('Tab');
+  await expect(match.locator('fieldset').nth(1).locator('input').first()).toBeFocused();
+});

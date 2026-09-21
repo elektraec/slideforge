@@ -18,3 +18,10 @@
 .reveal .sf-match label>span{min-width:0;overflow-wrap:anywhere}
 .reveal .sf-match select{display:block;width:100%;max-width:100%;min-width:0;white-space:normal;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:700px){.reveal .sf-match label{grid-template-columns:1fr}.reveal .sf-match select{width:100%}}
+.reveal .sf-match-item{min-width:0;max-width:100%;margin:.35em 0;padding:.35em .55em;border:1px solid #ddd2ec;border-radius:10px}
+.reveal .sf-match-item legend{max-width:100%;padding:0 .25em;color:var(--inst-purple-dark);font-weight:700;overflow-wrap:anywhere}
+.reveal .sf-match-categories{display:flex;flex-wrap:wrap;gap:.3em .7em;min-width:0}
+.reveal .sf-match-categories label{display:inline-flex;grid-template-columns:none;align-items:center;gap:.2em;min-width:0;margin:0;padding:.18em .3em;border-radius:7px}
+.reveal .sf-match-categories label:focus-within{outline:3px solid var(--inst-orange);outline-offset:2px}
+.reveal .sf-match-categories input{flex:0 0 auto;accent-color:var(--inst-purple)}
+.reveal .sf-match-categories span{min-width:0;overflow-wrap:anywhere}

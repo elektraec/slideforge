@@ -34,6 +34,8 @@ feedback: Correcto.
 
 Existen `quiz`, `truefalse`, `flashcards`, `tabs`, `accordion`, `answer`, `sort`, `match`, `slider`, `hotspot`, `calculator`, `form`, `mermaid`, `columns` e `iframe`. El generador de prompts produce texto para copiar a una herramienta externa; no realiza peticiones a servicios de IA.
 
+En `:::match`, las respuestas únicas conservan el matching tradicional con selectores. Si una respuesta se repite, SlideForge activa automáticamente el modo de clasificación: crea una categoría única por respuesta y muestra un grupo de opciones accesible por teclado para cada elemento. La validación usa el valor de la respuesta, por lo que el orden visual no afecta el resultado.
+
 Los diagramas aceptan tanto `:::mermaid` como bloques de código Markdown etiquetados `mermaid`.
 
 ## Archivos

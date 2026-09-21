@@ -40,8 +40,16 @@ export function renderBlock(type, body) {
     case 'answer': return `<div class="sf-answer"><button type="button">Mostrar respuesta</button><div hidden>${md(body)}</div></div>`;
     case 'sort': return `<div class="sf-card sf-sort" data-order="${esc(items(body).join('|'))}"><p>Ordena los elementos con los botones ↑ y ↓.</p><ol>${items(body).reverse().map(item => `<li>${esc(item)} <button type="button" data-move="up" aria-label="Subir">↑</button><button type="button" data-move="down" aria-label="Bajar">↓</button></li>`).join('')}</ol><button type="button" data-check>Comprobar</button><p class="sf-feedback" role="status"></p></div>`;
     case 'match': {
-      const pairs = items(body).map(item => item.split('|'));
-      return `<div class="sf-card sf-match"><p>Relaciona cada concepto con su definición.</p>${pairs.map(([a], i) => `<label><span>${esc(a)}</span><select data-answer="${i}"><option value="">Seleccionar…</option>${pairs.map(([, b], j) => `<option value="${j}">${esc(b || '')}</option>`).join('')}</select></label>`).join('')}<button type="button" data-check>Comprobar</button><p class="sf-feedback" role="status"></p></div>`;
+      const pairs = items(body).map(item => {
+        const separator = item.indexOf('|');
+        return separator < 0 ? [item.trim(), ''] : [item.slice(0, separator).trim(), item.slice(separator + 1).trim()];
+      });
+      const answers = [...new Set(pairs.map(([, answer]) => answer))];
+      const classification = answers.length < pairs.length;
+      const controls = classification
+        ? pairs.map(([concept, answer], i) => `<fieldset class="sf-match-item" data-answer="${esc(answer)}"><legend>${esc(concept)}</legend><div class="sf-match-categories">${answers.map(category => `<label><input type="radio" name="match-${i}" value="${esc(category)}"> <span>${esc(category)}</span></label>`).join('')}</div></fieldset>`).join('')
+        : pairs.map(([concept, answer]) => `<label><span>${esc(concept)}</span><select data-answer="${esc(answer)}"><option value="">Seleccionar…</option>${answers.map(category => `<option value="${esc(category)}">${esc(category)}</option>`).join('')}</select></label>`).join('');
+      return `<form class="sf-card sf-match" data-mode="${classification ? 'classification' : 'traditional'}"><p>${classification ? 'Clasifica cada elemento en una categoría.' : 'Relaciona cada concepto con su definición.'}</p>${controls}<button type="button" data-check>Comprobar</button><p class="sf-feedback" role="status"></p></form>`;
     }
     case 'slider': {
       const min = Number(field(body, 'min', '0')), max = Number(field(body, 'max', '100')), value = Number(field(body, 'value', String(min)));
