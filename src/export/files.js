@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { serializeMarkdown, normalizeProject } from '../model.js';
+import { serializeMarkdown, normalizeImportedProject } from '../model.js';
 
 const safeName = s => String(s || 'presentacion').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '') || 'presentacion';
 export function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 30000); }
@@ -43,7 +43,7 @@ export async function importProjectZip(file) {
   const zip = await JSZip.loadAsync(file);
   const projectFile = zip.file('project.json');
   if (!projectFile) throw new Error('El ZIP no contiene project.json.');
-  const project = normalizeProject(JSON.parse(await projectFile.async('text')));
+  const project = normalizeImportedProject(JSON.parse(await projectFile.async('text')));
   if (project.config.branding.logo?.startsWith('branding/')) project.config.branding.logo = await urlToData(project.config.branding.logo, zip);
   for (const [name, data] of Object.entries(project.assets)) if (data.startsWith('assets/')) project.assets[name] = await urlToData(data, zip);
   return project;

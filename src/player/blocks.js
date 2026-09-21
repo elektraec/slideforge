@@ -1,5 +1,9 @@
 import { marked } from 'marked';
 import katex from 'katex';
+import createDOMPurify from 'dompurify';
+
+const purifier = typeof window === 'undefined' ? null : createDOMPurify(window);
+const sanitizeHtml = html => purifier ? purifier.sanitize(html, { USE_PROFILES: { html: true } }) : html;
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const lines = body => body.trim().split('\n').map(s => s.trim()).filter(Boolean);
@@ -13,7 +17,7 @@ const md = value => {
     catch { equations.push(esc(display || inline)); }
     return token;
   });
-  let result = marked.parse(prepared, { breaks: true });
+  let result = sanitizeHtml(marked.parse(prepared, { breaks: true }));
   equations.forEach((html, i) => { result = result.replace(`SLIDEFORGEMATH${i}END`, html); });
   return result;
 };
@@ -60,7 +64,7 @@ export function renderBlock(type, body) {
     }
     case 'iframe': {
       const url = field(body, 'url', body.trim());
-      return /^https?:\/\//i.test(url) ? `<iframe class="sf-embed" src="${esc(url)}" title="Contenido externo" allowfullscreen loading="lazy"></iframe>` : '<p>URL de iframe no válida.</p>';
+      return /^https?:\/\//i.test(url) ? `<iframe class="sf-embed" src="${esc(url)}" title="Contenido externo" sandbox="allow-scripts allow-forms allow-presentation" referrerpolicy="no-referrer" allow="fullscreen" allowfullscreen loading="lazy"></iframe>` : '<p>URL de iframe no válida.</p>';
     }
     default: return md(`:::${type}\n${body}\n:::`);
   }

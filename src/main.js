@@ -1,4 +1,4 @@
-import { createProject, newSlide, KINDS, PALETTE, normalizeProject, parseMarkdown, serializeMarkdown } from './model.js';
+import { createProject, newSlide, KINDS, PALETTE, normalizeProject, normalizeImportedProject, parseMarkdown, serializeMarkdown } from './model.js';
 import { snippets } from './editor/snippets.js';
 import { pedagogical, templateSlides } from './templates/index.js';
 import { generatePrompt } from './prompts/generate.js';
@@ -109,9 +109,9 @@ async function importFile(file, asLogo = false) {
   const name = file.name.toLowerCase();
   if (asLogo || (file.type.startsWith('image/') && /logo|escudo|emblema/.test(name))) { project.config.branding.logo = await fileData(file); update(); if ($('#panel-dialog').open) openBranding(); return; }
   if (file.type.startsWith('image/')) { const filename = file.name.replace(/[^\w.\-]/g, '-'); project.assets[filename] = await fileData(file); const editor = $('#content'); editor.setRangeText(`\n![${file.name}](assets/${filename})\n`, editor.selectionStart, editor.selectionEnd, 'end'); slide().content = editor.value; update(); return; }
-  if (name.endsWith('.zip')) { project = await importProjectZip(file); selected = 0; update(); return; }
+  if (name.endsWith('.zip')) { project = await importProjectZip(file); selected = 0; update(); if (project.config.customJs) setStatus('Proyecto importado · JavaScript personalizado desactivado'); return; }
   const text = await file.text();
-  if (name.endsWith('.json')) { project = normalizeProject(JSON.parse(text)); selected = 0; update(); return; }
+  if (name.endsWith('.json')) { project = normalizeImportedProject(JSON.parse(text)); selected = 0; update(); if (project.config.customJs) setStatus('Proyecto importado · JavaScript personalizado desactivado'); return; }
   if (name.endsWith('.md') || name.endsWith('.markdown') || name.endsWith('.txt')) { const slides = parseMarkdown(text); if (!slides.length) throw new Error('El archivo no contiene diapositivas.'); project.slides = slides; selected = 0; update(); return; }
   if (name.endsWith('.html')) { const s = newSlide(); s.name = file.name; s.content = text; project.slides.splice(selected+1, 0, s); selected++; update(); return; }
   throw new Error('Formato de archivo no compatible.');

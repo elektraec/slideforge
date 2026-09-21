@@ -45,6 +45,12 @@ export function normalizeProject(input) {
   return { version: 1, config, slides: slides.length ? slides : [newSlide()], assets: input.assets && typeof input.assets === 'object' ? input.assets : {} };
 }
 
+export function normalizeImportedProject(input) {
+  const project = normalizeProject(input);
+  project.config.enableCustomJs = false;
+  return project;
+}
+
 export function serializeMarkdown(project) {
   return project.slides.map(s => `<!-- slideforge:${s.kind}:${encodeURIComponent(s.name)} -->\n${s.content}${s.notes ? `\n\nNotes:\n${s.notes}` : ''}`).join('\n\n---\n\n');
 }

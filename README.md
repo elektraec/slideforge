@@ -19,6 +19,8 @@ Edita Markdown o HTML en cada diapositiva. El menú **Insertar** añade ejemplos
 
 En **Tema y navegación → Avanzado** puedes añadir CSS y JavaScript propios. El JavaScript requiere activar la casilla correspondiente y se ejecuta en la presentación; revísalo antes de activar un proyecto ajeno.
 
+El HTML se sanitiza antes de mostrarse. Al importar un proyecto JSON o `.slideforge.zip`, SlideForge conserva su JavaScript personalizado pero lo deja desactivado hasta que el usuario lo revise y lo active manualmente. Los `iframe` insertados se ejecutan en un entorno aislado.
+
 Los bloques interactivos usan esta forma:
 
 ```markdown
@@ -48,6 +50,18 @@ El logo se carga en **Branding institucional**. No se incluye ningún logo ficti
 ## Publicación
 
 El workflow `.github/workflows/pages.yml` compila la app y publica `dist/` en GitHub Pages. Activa GitHub Pages con fuente **GitHub Actions** en la configuración del repositorio. La ruta de la app es `https://USUARIO.github.io/slideforge/`. Un ZIP web exportado puede desplegarse en cualquier carpeta estática y embeberse en Canvas LMS mediante un `iframe`.
+
+Las presentaciones ubicadas bajo `public/presentations/` reciben automáticamente el runtime actual durante `npm run dev` y `npm run build`. De este modo, una presentación publicada no conserva versiones antiguas de navegación, Mermaid o estilos.
+
+## Pruebas
+
+```bash
+npm test
+npx playwright install chromium
+npm run test:browser
+```
+
+Las pruebas de navegador validan navegación mediante botones y teclado, renderizado Mermaid, tamaño de tablas, sanitización de contenido importado y la estructura del ZIP web. El workflow de GitHub Pages ejecuta las pruebas antes de publicar.
 
 ## Licencia
 

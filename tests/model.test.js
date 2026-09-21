@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createProject, parseMarkdown, serializeMarkdown, normalizeProject } from '../src/model.js';
+import { createProject, parseMarkdown, serializeMarkdown, normalizeImportedProject, normalizeProject } from '../src/model.js';
 import { renderContent } from '../src/player/blocks.js';
 
 test('project Markdown round trip keeps slide kinds, names and notes', () => {
@@ -63,4 +63,13 @@ test('invalid project options fall back to supported values', () => {
   assert.equal(value.config.transition, 'slide');
   assert.equal(value.config.branding.logoMode, 'all');
   assert.equal(value.slides.length, 1);
+});
+
+test('imported projects never execute custom JavaScript automatically', () => {
+  const project = normalizeImportedProject({
+    config: { enableCustomJs: true, customJs: 'window.example = true' },
+    slides: [{ content: '# Importada' }]
+  });
+  assert.equal(project.config.enableCustomJs, false);
+  assert.equal(project.config.customJs, 'window.example = true');
 });
