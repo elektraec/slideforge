@@ -21,6 +21,7 @@ let deck;
 let rendering = false;
 let pendingProject;
 let mermaidSerial = 0;
+let activeSlideCount = 0;
 mountInteractions(slideRoot);
 mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'base', fontFamily: 'Arial, sans-serif', fontSize: '16px', markdownAutoWrap: true, flowchart: { wrappingWidth: 180 }, timeline: { useMaxWidth: true }, themeVariables: { primaryColor: '#f4effa', primaryTextColor: '#3a1467', primaryBorderColor: '#542e91', lineColor: '#f37121' } });
 
@@ -30,22 +31,44 @@ function assetContent(content, assets) {
 
 function logoAllowed(kind, mode) { return mode === 'all' || (mode === 'ends' && (kind === 'cover' || kind === 'closing')); }
 
-function mountHomeControl(config) {
-  revealRoot.querySelector('.sf-home-control')?.remove();
+function mountNavigationControls(config, slideCount) {
+  revealRoot.querySelector('.sf-navigation-controls')?.remove();
   if (!config.controls) return;
-  const button = document.createElement('button');
-  button.className = 'sf-home-control';
-  button.type = 'button';
-  button.title = 'Volver a la primera diapositiva';
-  button.setAttribute('aria-label', 'Volver a la primera diapositiva');
-  button.innerHTML = '<span aria-hidden="true">⌂</span><span>Inicio</span>';
-  button.addEventListener('click', () => deck?.slide(0, 0, 0));
-  revealRoot.append(button);
+  const controls = document.createElement('nav');
+  controls.className = 'sf-navigation-controls';
+  controls.setAttribute('aria-label', 'Navegación de la presentación');
+  controls.innerHTML = `
+    <button type="button" data-nav="previous" title="Diapositiva anterior (←)" aria-label="Diapositiva anterior">←</button>
+    <button type="button" data-nav="home" title="Primera diapositiva (Home)">Home</button>
+    <button type="button" data-nav="end" title="Última diapositiva (End)">End</button>
+    <button type="button" data-nav="next" title="Diapositiva siguiente (→)" aria-label="Diapositiva siguiente">→</button>`;
+  const go = action => {
+    if (!deck) return;
+    if (action === 'previous') deck.prev();
+    if (action === 'next') deck.next();
+    if (action === 'home') deck.slide(0, 0, 0);
+    if (action === 'end') deck.slide(Math.max(0, slideCount - 1), 0, 0);
+  };
+  controls.addEventListener('click', event => {
+    const button = event.target.closest('button[data-nav]');
+    if (button) go(button.dataset.nav);
+  });
+  const update = () => {
+    const index = deck?.getIndices().h || 0;
+    controls.querySelector('[data-nav="previous"]').disabled = index <= 0;
+    controls.querySelector('[data-nav="home"]').disabled = index <= 0;
+    controls.querySelector('[data-nav="next"]').disabled = index >= slideCount - 1;
+    controls.querySelector('[data-nav="end"]').disabled = index >= slideCount - 1;
+  };
+  deck.on('slidechanged', update);
+  revealRoot.append(controls);
+  update();
 }
 
 async function draw(projectInput) {
   const project = normalizeProject(projectInput);
   const { config, assets } = project;
+  activeSlideCount = project.slides.length;
   let customStyle = document.querySelector('#slideforge-custom-style');
   if (!customStyle) { customStyle = document.createElement('style'); customStyle.id = 'slideforge-custom-style'; document.head.append(customStyle); }
   customStyle.textContent = config.customCss || '';
@@ -106,9 +129,9 @@ async function draw(projectInput) {
       console.error('SlideForge Mermaid:', error);
     }
   }
-  deck = new Reveal(revealRoot, { width, height: 720, margin: 0.06, minScale: 0.2, maxScale: 2, controls: !!config.controls, progress: !!config.progress, slideNumber: !!config.slideNumber, transition: config.transition, hash: !window.frameElement, plugins: [RevealMarkdown, RevealHighlight, RevealNotes, RevealSearch, RevealZoom] });
+  deck = new Reveal(revealRoot, { width, height: 720, margin: 0.06, minScale: 0.2, maxScale: 2, controls: false, progress: !!config.progress, slideNumber: !!config.slideNumber, transition: config.transition, hash: !window.frameElement, plugins: [RevealMarkdown, RevealHighlight, RevealNotes, RevealSearch, RevealZoom] });
   await deck.initialize();
-  mountHomeControl(config);
+  mountNavigationControls(config, project.slides.length);
   deck.layout();
   if (config.enableCustomJs && config.customJs) {
     try { new Function('deck', 'root', 'project', config.customJs)(deck, slideRoot, project); }
@@ -143,5 +166,20 @@ if (embedded) {
 }
 
 window.addEventListener('keydown', event => {
-  if (event.key === 'f' && !(event.target instanceof HTMLInputElement)) document.documentElement.requestFullscreen?.();
-});
+  const target = event.target;
+  const editing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target instanceof HTMLButtonElement || target?.isContentEditable;
+  if (editing || event.ctrlKey || event.metaKey || event.altKey) return;
+  const actions = {
+    ArrowLeft: () => deck?.prev(),
+    ArrowRight: () => deck?.next(),
+    Home: () => deck?.slide(0, 0, 0),
+    End: () => deck?.slide(Math.max(0, activeSlideCount - 1), 0, 0)
+  };
+  if (actions[event.key]) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    actions[event.key]();
+  } else if (event.key === 'f') {
+    document.documentElement.requestFullscreen?.();
+  }
+}, true);
