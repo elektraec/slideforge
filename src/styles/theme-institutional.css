@@ -16,5 +16,5 @@
 .reveal .sf-options button{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:normal}
 .reveal .sf-match label{display:grid;grid-template-columns:minmax(0,1fr) minmax(9em,55%);align-items:center;gap:.5em;min-width:0}
 .reveal .sf-match label>span{min-width:0;overflow-wrap:anywhere}
-.reveal .sf-match select{width:100%;max-width:100%;min-width:0;white-space:normal}
+.reveal .sf-match select{display:block;width:100%;max-width:100%;min-width:0;white-space:normal;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:700px){.reveal .sf-match label{grid-template-columns:1fr}.reveal .sf-match select{width:100%}}

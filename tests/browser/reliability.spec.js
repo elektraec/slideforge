@@ -179,4 +179,6 @@ feedback: Correcto.
   await expect(preview.locator('.sf-match')).toBeVisible();
   const widthsFit = await preview.locator('.sf-slide-inner').first().evaluate(inner => ({ client: inner.clientWidth, scroll: inner.scrollWidth }));
   expect(widthsFit.scroll).toBeLessThanOrEqual(widthsFit.client + 3);
+  await expect(page.locator('#overflow-alert')).toBeHidden();
+  await expect(page.locator('#diagnostic-count')).toHaveText('');
 });

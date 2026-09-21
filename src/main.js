@@ -75,8 +75,7 @@ function calculateDiagnostics() {
   project.slides.forEach((item, index) => {
     const lines = item.content.split('\n');
     const vertical = lines.length > 28 || item.content.length > 2200;
-    const horizontal = lines.some(line => line.length > 125 && !/^\s*(?:https?:|:::mermaid|flowchart|graph)/i.test(line));
-    if ((vertical || horizontal) && !merged.has(index)) merged.set(index, { index, vertical, horizontal, elements: ['Estimación por cantidad de contenido'] });
+    if (vertical && !merged.has(index)) merged.set(index, { index, vertical: true, horizontal: false, elements: ['Estimación por cantidad de contenido'] });
   });
   overflowDiagnostics = [...merged.values()].sort((a, b) => a.index - b.index);
   $('#diagnostic-count').textContent = overflowDiagnostics.length ? `(${overflowDiagnostics.length})` : '';
