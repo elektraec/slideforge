@@ -72,7 +72,7 @@ export function renderBlock(type, body) {
     }
     case 'iframe': {
       const url = field(body, 'url', body.trim());
-      return /^https?:\/\//i.test(url) ? `<iframe class="sf-embed" src="${esc(url)}" title="Contenido externo" sandbox="allow-scripts allow-forms allow-presentation" referrerpolicy="no-referrer" allow="fullscreen" allowfullscreen loading="lazy"></iframe>` : '<p>URL de iframe no válida.</p>';
+      return /^https?:\/\//i.test(url) ? `<iframe class="sf-embed" src="${esc(url)}" title="Contenido externo" sandbox="allow-scripts allow-forms allow-presentation" referrerpolicy="no-referrer" allow="fullscreen" allowfullscreen loading="lazy" scrolling="no"></iframe>` : '<p>URL de iframe no válida.</p>';
     }
     default: return md(`:::${type}\n${body}\n:::`);
   }

@@ -39,6 +39,46 @@ test('Mermaid and compact Markdown tables render without overflow errors', async
   expect(fits).toBe(true);
 });
 
+test('slides, tables and form components stay within one screen without scrollbars', async ({ page }) => {
+  const preview = await openEditor(page);
+  await page.locator('#content').fill(`# Reconocer el entorno PSeInt
+
+## Elementos principales
+
+| Elemento | Para qué sirve |
+| --- | --- |
+| Editor | Escribir el pseudocódigo |
+| Consola | Mostrar resultados y mensajes |
+| Diagrama | Visualizar el flujo del algoritmo |
+| Ejecución | Probar paso a paso la solución |
+
+:::form
+question: ¿Qué elemento de PSeInt crees que usarás más hoy? Explica en una frase.
+:::`);
+  const section = preview.locator('.sf-slide').first();
+  const table = section.locator('.sf-table-wrap');
+  const form = section.locator('.sf-form');
+  await expect(table).toBeVisible();
+  await expect(form).toBeVisible();
+  const layout = await section.evaluate(node => {
+    const wrapper = node.querySelector('.sf-table-wrap');
+    const formNode = node.querySelector('.sf-form');
+    return {
+      sectionOverflow: getComputedStyle(node).overflow,
+      tableOverflowX: getComputedStyle(wrapper).overflowX,
+      formOverflowX: getComputedStyle(formNode).overflowX,
+      horizontal: node.scrollWidth > node.clientWidth + 3,
+      vertical: node.scrollHeight > node.clientHeight + 3
+    };
+  });
+  expect(layout.sectionOverflow).toBe('clip');
+  expect(layout.tableOverflowX).not.toMatch(/auto|scroll/);
+  expect(layout.formOverflowX).not.toMatch(/auto|scroll/);
+  expect(layout.horizontal).toBe(false);
+  expect(layout.vertical).toBe(false);
+  await expect(page.locator('#overflow-alert')).toBeHidden();
+});
+
 test('preview updates one slide and IndexedDB stores resources separately', async ({ page }) => {
   const preview = await openEditor(page);
   const before = await preview.locator('body').evaluate(() => ({ ...window.__slideforgeDiagnostics }));

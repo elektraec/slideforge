@@ -77,7 +77,7 @@ test('equations render offline as native MathML', () => {
   assert.match(renderContent('$$E = mc^2$$'), /<math/);
 });
 
-test('Markdown tables get a content-sized scroll container', () => {
+test('Markdown tables get a responsive sizing wrapper', () => {
   const html = renderContent('| Criterio | Pregunta |\n| --- | --- |\n| Claridad | ¿Se entiende qué hacer? |');
   assert.match(html, /<div class="sf-table-wrap"><table>/);
   assert.match(html, /<\/table><\/div>/);

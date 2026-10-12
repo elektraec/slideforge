@@ -21,6 +21,8 @@ En **Tema y navegación → Avanzado** puedes añadir CSS y JavaScript propios. 
 
 En **Tema y navegación → Tamaño de letra** puedes elegir entre pequeña, normal, grande y muy grande. El ajuste automático usa ese tamaño como punto de partida y reduce únicamente las diapositivas que lo necesiten hasta un límite legible; si el contenido sigue sin caber, SlideForge conserva el aviso de desbordamiento para que puedas dividirlo.
 
+Las presentaciones usan una pantalla fija por diapositiva. Las slides, tablas, bloques de código y componentes propios no muestran barras de desplazamiento; el contenido se ajusta, se envuelve y, cuando supera el límite legible, se reporta en el diagnóstico de autoría.
+
 El HTML se sanitiza antes de mostrarse. Al importar un proyecto JSON o `.slideforge.zip`, SlideForge conserva su JavaScript personalizado pero lo deja desactivado hasta que el usuario lo revise y lo active manualmente. Los `iframe` insertados se ejecutan en un entorno aislado.
 
 Los bloques interactivos usan esta forma:
