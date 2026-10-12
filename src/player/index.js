@@ -24,6 +24,9 @@ let mermaidSerial = 0;
 let activeSlideCount = 0;
 let lastProjectSignature = '';
 let lastProjectRevision = -1;
+const FONT_SIZES = Object.freeze({ small: 34, normal: 40, large: 46, xlarge: 52 });
+const MIN_AUTO_FIT_SCALE = 0.62;
+const AUTO_FIT_STEP = 0.04;
 mountInteractions(slideRoot);
 mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'base', fontFamily: 'Arial, sans-serif', fontSize: '16px', markdownAutoWrap: true, flowchart: { wrappingWidth: 180 }, timeline: { useMaxWidth: true }, themeVariables: { primaryColor: '#f4effa', primaryTextColor: '#3a1467', primaryBorderColor: '#542e91', lineColor: '#f37121' } });
 
@@ -130,14 +133,39 @@ function mountNavigationControls(config, slideCount) {
   update();
 }
 
+function measureOverflow(section) {
+  const inner = section.querySelector('.sf-slide-inner');
+  if (!inner) return { horizontal: false, vertical: false, childBoxes: [] };
+  const bounds = section.getBoundingClientRect();
+  const childBoxes = [...inner.children].map(element => ({ element, box: element.getBoundingClientRect() }));
+  const horizontal = section.scrollWidth > section.clientWidth + 3 || inner.scrollWidth > inner.clientWidth + 3 || childBoxes.some(({ box }) => box.right > bounds.right + 3 || box.left < bounds.left - 3);
+  const vertical = section.scrollHeight > section.clientHeight + 3 || inner.scrollHeight > inner.clientHeight + 3 || childBoxes.some(({ box }) => box.bottom > bounds.bottom + 3 || box.top < bounds.top - 3);
+  return { horizontal, vertical, childBoxes, bounds };
+}
+
+function fitSection(section, enabled) {
+  section.style.setProperty('--sf-slide-font-scale', '1');
+  section.removeAttribute('data-auto-fitted');
+  if (!enabled || !section.clientWidth || !section.clientHeight) return 1;
+  let scale = 1;
+  let measured = measureOverflow(section);
+  while ((measured.horizontal || measured.vertical) && scale > MIN_AUTO_FIT_SCALE) {
+    scale = Math.max(MIN_AUTO_FIT_SCALE, Number((scale - AUTO_FIT_STEP).toFixed(2)));
+    section.style.setProperty('--sf-slide-font-scale', String(scale));
+    measured = measureOverflow(section);
+  }
+  if (scale < 1) section.dataset.autoFitted = String(scale);
+  return scale;
+}
+
+function fitSlides(scope = slideRoot) {
+  const sections = scope.matches?.('.sf-slide') ? [scope] : [...scope.querySelectorAll('.sf-slide')];
+  for (const section of sections) fitSection(section, currentProject?.config.autoFit !== false);
+}
+
 function reportOverflow() {
   const overflow = [...slideRoot.children].map((section, index) => {
-    const inner = section.querySelector('.sf-slide-inner');
-    if (!inner) return null;
-    const bounds = section.getBoundingClientRect();
-    const childBoxes = [...inner.children].map(element => ({ element, box: element.getBoundingClientRect() }));
-    const horizontal = section.scrollWidth > section.clientWidth + 3 || inner.scrollWidth > inner.clientWidth + 3 || childBoxes.some(({ box }) => box.right > bounds.right + 3 || box.left < bounds.left - 3);
-    const vertical = section.scrollHeight > section.clientHeight + 3 || inner.scrollHeight > inner.clientHeight + 3 || childBoxes.some(({ box }) => box.bottom > bounds.bottom + 3 || box.top < bounds.top - 3);
+    const { horizontal, vertical, childBoxes, bounds } = measureOverflow(section);
     section.toggleAttribute('data-content-overflow', horizontal || vertical);
     if (!horizontal && !vertical) return null;
     const elements = childBoxes.filter(({ box }) => {
@@ -150,8 +178,13 @@ function reportOverflow() {
 }
 
 function scheduleOverflowReport() {
-  requestAnimationFrame(() => requestAnimationFrame(reportOverflow));
-  document.fonts?.ready.then(reportOverflow);
+  const fitAndReport = () => {
+    fitSlides();
+    deck?.layout();
+    reportOverflow();
+  };
+  requestAnimationFrame(() => requestAnimationFrame(fitAndReport));
+  document.fonts?.ready.then(fitAndReport);
 }
 window.addEventListener('resize', scheduleOverflowReport);
 
@@ -169,6 +202,7 @@ async function draw(projectInput) {
   const colors = config.branding.colors;
   const vars = { dark: '--inst-purple-dark', primary: '--inst-purple', soft: '--inst-purple-soft', orange: '--inst-orange', yellow: '--inst-yellow', white: '--inst-white' };
   for (const [key, variable] of Object.entries(vars)) document.documentElement.style.setProperty(variable, colors[key]);
+  document.documentElement.style.setProperty('--sf-base-font-size', `${FONT_SIZES[config.fontSize] || FONT_SIZES.normal}px`);
   if (deck) { await deck.destroy(); deck = null; }
   slideRoot.innerHTML = '';
   project.slides.forEach(slide => {

@@ -84,11 +84,19 @@ test('Markdown tables get a content-sized scroll container', () => {
 });
 
 test('invalid project options fall back to supported values', () => {
-  const value = normalizeProject({ config: { ratio: '20:9', transition: 'spin', branding: { logoMode: 'sometimes' } }, slides: [] });
+  const value = normalizeProject({ config: { ratio: '20:9', transition: 'spin', fontSize: 'gigantic', branding: { logoMode: 'sometimes' } }, slides: [] });
   assert.equal(value.config.ratio, '16:9');
   assert.equal(value.config.transition, 'slide');
+  assert.equal(value.config.fontSize, 'normal');
+  assert.equal(value.config.autoFit, true);
   assert.equal(value.config.branding.logoMode, 'all');
   assert.equal(value.slides.length, 1);
+});
+
+test('font size and disabled automatic fitting remain portable project settings', () => {
+  const value = normalizeProject({ config: { fontSize: 'xlarge', autoFit: false }, slides: [{ content: '# Texto' }] });
+  assert.equal(value.config.fontSize, 'xlarge');
+  assert.equal(value.config.autoFit, false);
 });
 
 test('imported projects never execute custom JavaScript automatically', () => {

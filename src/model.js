@@ -25,7 +25,7 @@ export function newSlide(kind = 'content') {
 export function createProject() {
   return {
     version: 1,
-    config: { title: 'Mi clase', author: '', course: '', institution: '', theme: 'institutional', transition: 'slide', ratio: '16:9', controls: true, progress: true, slideNumber: true, customCss: '', customJs: '', enableCustomJs: false, branding: { logo: '', logoPosition: 'bottom-right', logoMode: 'all', colors: { ...PALETTE } } },
+    config: { title: 'Mi clase', author: '', course: '', institution: '', theme: 'institutional', transition: 'slide', ratio: '16:9', fontSize: 'normal', autoFit: true, controls: true, progress: true, slideNumber: true, customCss: '', customJs: '', enableCustomJs: false, branding: { logo: '', logoPosition: 'bottom-right', logoMode: 'all', colors: { ...PALETTE } } },
     slides: [newSlide('cover'), newSlide('content'), newSlide('activity'), newSlide('closing')],
     assets: {}
   };
@@ -41,6 +41,8 @@ export function normalizeProject(input) {
   if (!MODES.includes(config.branding.logoMode)) config.branding.logoMode = 'all';
   if (!['16:9', '4:3'].includes(config.ratio)) config.ratio = '16:9';
   if (!['slide', 'fade', 'convex', 'concave', 'zoom', 'none'].includes(config.transition)) config.transition = 'slide';
+  if (!['small', 'normal', 'large', 'xlarge'].includes(config.fontSize)) config.fontSize = 'normal';
+  config.autoFit = config.autoFit !== false;
   const slides = Array.isArray(input.slides) ? input.slides.map(s => ({ id: s.id || uid(), kind: KINDS.includes(s.kind) ? s.kind : 'content', name: String(s.name || 'Diapositiva'), content: String(s.content || ''), notes: String(s.notes || '') })) : fresh.slides;
   return { version: 1, config, slides: slides.length ? slides : [newSlide()], assets: input.assets && typeof input.assets === 'object' ? input.assets : {} };
 }

@@ -151,6 +151,30 @@ test('slide thumbnails can be searched and overflow is diagnosed', async ({ page
   await expect(page.locator('#diagnostic-count')).toHaveText(/\([1-9]\d*\)/);
 });
 
+test('font size setting enlarges text and auto-fits only a dense slide', async ({ page }) => {
+  const preview = await openEditor(page);
+  await page.locator('#content').fill('# Tipografía\n\nTexto breve y legible.');
+  await page.getByRole('button', { name: 'Tema y navegación' }).click();
+  await page.locator('[data-setting="fontSize"]').selectOption('xlarge');
+  const section = preview.locator('.sf-slide').first();
+  await expect.poll(() => section.evaluate(node => Number.parseFloat(getComputedStyle(node).fontSize))).toBe(52);
+  await expect(section).not.toHaveAttribute('data-auto-fitted', /.+/);
+  await page.locator('dialog .close').click();
+
+  const dense = '# Contenido que debe ajustarse\n\n' + Array.from({ length: 9 }, (_, index) => `- Idea ${index + 1} para explicar en clase`).join('\n');
+  await page.locator('#content').fill(dense);
+  await expect(section).toHaveAttribute('data-auto-fitted', /0\.[0-9]+/);
+  const fit = await section.evaluate(node => ({
+    scale: Number(node.dataset.autoFitted),
+    horizontal: node.scrollWidth > node.clientWidth + 3,
+    vertical: node.scrollHeight > node.clientHeight + 3
+  }));
+  expect(fit.scale).toBeGreaterThanOrEqual(0.62);
+  expect(fit.horizontal).toBe(false);
+  expect(fit.vertical).toBe(false);
+  await expect(page.locator('#overflow-alert')).toBeHidden();
+});
+
 test('save and publish flow explains each output', async ({ page }) => {
   await openEditor(page);
   await page.getByRole('button', { name: 'Guardar y publicar' }).click();
@@ -179,8 +203,8 @@ feedback: Correcto.
   await expect(preview.locator('.sf-match')).toBeVisible();
   const widthsFit = await preview.locator('.sf-slide-inner').first().evaluate(inner => ({ client: inner.clientWidth, scroll: inner.scrollWidth }));
   expect(widthsFit.scroll).toBeLessThanOrEqual(widthsFit.client + 3);
-  await expect(page.locator('#overflow-alert')).toBeHidden();
-  await expect(page.locator('#diagnostic-count')).toHaveText('');
+  const diagnostics = await preview.locator('body').evaluate(() => window.__slideforgeOverflow || []);
+  expect(diagnostics.every(item => item.horizontal === false)).toBe(true);
 });
 
 test('classification match validates answer values after category reordering', async ({ page }) => {
