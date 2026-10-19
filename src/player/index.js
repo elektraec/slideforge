@@ -39,10 +39,50 @@ function goToEnd() {
   deck?.slide(Math.max(0, activeSlideCount - 1), 0, 0);
 }
 
+function enhanceImages(section, slideKind) {
+  const inner = section.querySelector('.sf-slide-inner');
+  const images = [...inner.querySelectorAll('img')];
+  if (!images.length) return;
+  section.classList.add('sf-slide-has-image');
+  for (const image of images) {
+    image.decoding = 'async';
+    image.addEventListener('load', scheduleOverflowReport, { once: true });
+    image.addEventListener('error', scheduleOverflowReport, { once: true });
+    image.decode?.().then(scheduleOverflowReport).catch(() => {});
+  }
+  if (slideKind !== 'image') return;
+  const image = images[0];
+  const title = [...inner.children].find(node => /^H[1-3]$/.test(node.tagName));
+  const directHost = image.parentElement?.tagName === 'P' && image.parentElement.children.length === 1 ? image.parentElement : image;
+  const layout = document.createElement('div');
+  layout.className = 'sf-image-layout';
+  const figure = document.createElement('figure');
+  figure.className = 'sf-image-frame';
+  const copy = document.createElement('div');
+  copy.className = 'sf-image-copy';
+  directHost.before(layout);
+  figure.append(directHost);
+  const caption = image.getAttribute('title');
+  if (caption) {
+    const figcaption = document.createElement('figcaption');
+    figcaption.textContent = caption;
+    figure.append(figcaption);
+  }
+  layout.append(figure, copy);
+  for (const node of [...inner.children]) {
+    if (node !== title && node !== layout) copy.append(node);
+  }
+  if (!copy.textContent.trim() && !copy.querySelector('*')) {
+    copy.remove();
+    layout.classList.add('sf-image-only');
+  }
+}
+
 function renderSection(section, slide, project) {
   const { config, assets } = project;
   section.className = `sf-slide sf-slide-${slide.kind}`;
   section.innerHTML = `<div class="sf-slide-inner">${renderContent(assetContent(slide.content, assets))}</div>`;
+  enhanceImages(section, slide.kind);
   if (section.querySelector('.sf-mermaid')) section.classList.add('sf-slide-has-mermaid');
   if (config.branding.logo && logoAllowed(slide.kind, config.branding.logoMode)) {
     const img = document.createElement('img');

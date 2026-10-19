@@ -205,8 +205,15 @@ function resourceSize(value) {
 }
 function insertAsset(name) {
   const editor = $('#content');
-  editor.setRangeText(`\n![Descripción](assets/${name})\n`, editor.selectionStart, editor.selectionEnd, 'end');
+  const description = name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || 'Imagen';
+  const firstImage = !/(?:!\[[^\]]*\]\([^)]*\)|<img\b)/i.test(slide().content);
+  editor.setRangeText(`\n![${description}](assets/${name})\n`, editor.selectionStart, editor.selectionEnd, 'end');
   slide().content = editor.value;
+  if (firstImage && slide().kind === 'content') {
+    slide().kind = 'image';
+    $('#slide-kind').value = 'image';
+    renderList();
+  }
   commitHistory();
   persist();
   refreshSlidePreview();

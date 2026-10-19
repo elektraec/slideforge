@@ -23,6 +23,8 @@ En **Tema y navegación → Tamaño de letra** puedes elegir entre pequeña, nor
 
 Las presentaciones usan una pantalla fija por diapositiva. Las slides, tablas, bloques de código y componentes propios no muestran barras de desplazamiento; el contenido se ajusta, se envuelve y, cuando supera el límite legible, se reporta en el diagnóstico de autoría.
 
+Al añadir la primera imagen a una diapositiva de contenido, SlideForge activa automáticamente el diseño **Imagen + texto**. La imagen conserva su proporción, se limita al espacio disponible y vuelve a ejecutar el autoajuste cuando termina de cargar. El nombre del archivo se convierte en un texto alternativo inicial que puedes editar directamente en Markdown.
+
 El HTML se sanitiza antes de mostrarse. Al importar un proyecto JSON o `.slideforge.zip`, SlideForge conserva su JavaScript personalizado pero lo deja desactivado hasta que el usuario lo revise y lo active manualmente. Los `iframe` insertados se ejecutan en un entorno aislado.
 
 Los bloques interactivos usan esta forma:

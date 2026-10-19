@@ -79,6 +79,39 @@ question: ¿Qué elemento de PSeInt crees que usarás más hoy? Explica en una f
   await expect(page.locator('#overflow-alert')).toBeHidden();
 });
 
+test('image slides create a contained image and text composition after upload', async ({ page }) => {
+  const preview = await openEditor(page);
+  await page.locator('#slide-kind').selectOption('content');
+  await page.locator('#content').fill('# Aprendizaje visual\n\nLa imagen conserva su proporción y comparte el espacio con esta explicación.');
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900"><rect width="1600" height="900" fill="#542e91"/><circle cx="800" cy="450" r="260" fill="#f37121"/></svg>');
+  await page.locator('#image-input').setInputFiles({ name: 'panorama-aula.svg', mimeType: 'image/svg+xml', buffer: svg });
+  await expect(page.locator('#slide-kind')).toHaveValue('image');
+  await expect(page.locator('#content')).toHaveValue(/!\[panorama aula\]\(assets\/panorama-aula\.svg\)/);
+  const section = preview.locator('.sf-slide').first();
+  const layout = section.locator('.sf-image-layout');
+  const image = layout.locator('.sf-image-frame img');
+  await expect(layout).toBeVisible();
+  await expect(image).toHaveJSProperty('complete', true);
+  const metrics = await section.evaluate(node => {
+    const frame = node.querySelector('.sf-image-frame').getBoundingClientRect();
+    const imageBox = node.querySelector('.sf-image-frame img').getBoundingClientRect();
+    const bounds = node.getBoundingClientRect();
+    return {
+      objectFit: getComputedStyle(node.querySelector('.sf-image-frame img')).objectFit,
+      imageInsideFrame: imageBox.left >= frame.left - 1 && imageBox.right <= frame.right + 1 && imageBox.top >= frame.top - 1 && imageBox.bottom <= frame.bottom + 1,
+      layoutInsideSlide: frame.left >= bounds.left - 1 && frame.right <= bounds.right + 1 && frame.top >= bounds.top - 1 && frame.bottom <= bounds.bottom + 1,
+      horizontal: node.scrollWidth > node.clientWidth + 3,
+      vertical: node.scrollHeight > node.clientHeight + 3
+    };
+  });
+  expect(metrics.objectFit).toBe('contain');
+  expect(metrics.imageInsideFrame).toBe(true);
+  expect(metrics.layoutInsideSlide).toBe(true);
+  expect(metrics.horizontal).toBe(false);
+  expect(metrics.vertical).toBe(false);
+  await expect(page.locator('#overflow-alert')).toBeHidden();
+});
+
 test('preview updates one slide and IndexedDB stores resources separately', async ({ page }) => {
   const preview = await openEditor(page);
   const before = await preview.locator('body').evaluate(() => ({ ...window.__slideforgeDiagnostics }));
