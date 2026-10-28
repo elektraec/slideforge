@@ -26,6 +26,22 @@ test('navigation buttons and Arrow, Home and End keys remain available', async (
   await expect(previous).toBeDisabled();
 });
 
+test('hidden future slides are fitted before navigation and remain within the canvas', async ({ page }) => {
+  const preview = await openEditor(page);
+  await page.locator('.slide-select').nth(1).click();
+  const dense = '# Slide futura ajustada\n\n' + Array.from({ length: 14 }, (_, index) => `- Idea ${index + 1} con contenido para explicar`).join('\n');
+  await page.locator('#content').fill(dense);
+  const future = preview.locator('.sf-slide').nth(1);
+  await expect(future).toHaveAttribute('data-auto-fitted', /0\.[0-9]+/);
+  await expect(future).toHaveAttribute('hidden', '');
+  await preview.locator('[data-nav="next"]').click();
+  await expect(future).toBeVisible();
+  const fit = await future.evaluate(node => ({ horizontal: node.scrollWidth > node.clientWidth + 3, vertical: node.scrollHeight > node.clientHeight + 3 }));
+  expect(fit.horizontal).toBe(false);
+  expect(fit.vertical).toBe(false);
+  await expect(page.locator('#overflow-alert')).toBeHidden();
+});
+
 test('Mermaid and compact Markdown tables render without overflow errors', async ({ page }) => {
   const preview = await openEditor(page);
   await page.locator('#content').fill(`# Diagrama\n\n:::mermaid\nflowchart LR\n  A[Una etiqueta extensa que debe ajustarse dentro de la figura] --> B[Resultado]\n:::\n\n| Concepto | Descripción |\n| --- | --- |\n| UI | Interfaz visible |\n| UX | Experiencia completa |`);
@@ -185,6 +201,19 @@ test('web ZIP contains the current interactive runtime and portable project file
   expect(html).not.toContain('data:image/png');
   expect(JSON.parse(await zip.file('project.json').async('text')).assets['pixel.png']).toBe('assets/pixel.png');
   expect((await zip.file('css/player.css').async('text')).length).toBeLessThan(200_000);
+});
+
+test('PDF button opens Reveal print view and invokes the browser print dialog', async ({ page, context }) => {
+  await context.addInitScript(() => { window.print = () => { window.__printCalled = true; }; });
+  await openEditor(page);
+  const popupPromise = page.waitForEvent('popup');
+  await page.getByRole('button', { name: 'PDF / Imprimir' }).click();
+  const printView = await popupPromise;
+  await expect(printView).toHaveURL(/player\.html\?print-pdf/);
+  await expect.poll(() => printView.evaluate(() => window.__slideforgePrintReady === true)).toBe(true);
+  await expect.poll(() => printView.evaluate(() => window.__printCalled === true)).toBe(true);
+  await expect(page.locator('#save-status')).toContainText('Guardar como PDF');
+  await printView.close();
 });
 
 test('published presentations use the synchronized current runtime', async ({ page }) => {

@@ -24,6 +24,7 @@ let mermaidSerial = 0;
 let activeSlideCount = 0;
 let lastProjectSignature = '';
 let lastProjectRevision = -1;
+let printRequested = false;
 const FONT_SIZES = Object.freeze({ small: 34, normal: 40, large: 46, xlarge: 52 });
 const MIN_AUTO_FIT_SCALE = 0.62;
 const AUTO_FIT_STEP = 0.04;
@@ -178,15 +179,30 @@ function measureOverflow(section) {
   if (!inner) return { horizontal: false, vertical: false, childBoxes: [] };
   const bounds = section.getBoundingClientRect();
   const childBoxes = [...inner.children].map(element => ({ element, box: element.getBoundingClientRect() }));
-  const horizontal = section.scrollWidth > section.clientWidth + 3 || inner.scrollWidth > inner.clientWidth + 3 || childBoxes.some(({ box }) => box.right > bounds.right + 3 || box.left < bounds.left - 3);
-  const vertical = section.scrollHeight > section.clientHeight + 3 || inner.scrollHeight > inner.clientHeight + 3 || childBoxes.some(({ box }) => box.bottom > bounds.bottom + 3 || box.top < bounds.top - 3);
-  return { horizontal, vertical, childBoxes, bounds };
+  const componentSelector = '.sf-card,.sf-table-wrap,.sf-mermaid,.sf-columns,.sf-flashcards,.sf-tabs,.sf-accordion,.sf-hotspot,.sf-embed,.sf-image-layout,pre';
+  const componentBoxes = [...inner.querySelectorAll(componentSelector)].map(element => ({ element, box: element.getBoundingClientRect() }));
+  const boxes = [...childBoxes, ...componentBoxes];
+  const horizontal = section.scrollWidth > section.clientWidth + 3 || inner.scrollWidth > inner.clientWidth + 3 || boxes.some(({ box }) => box.right > bounds.right + 3 || box.left < bounds.left - 3);
+  const vertical = section.scrollHeight > section.clientHeight + 3 || inner.scrollHeight > inner.clientHeight + 3 || boxes.some(({ box }) => box.bottom > bounds.bottom + 3 || box.top < bounds.top - 3);
+  return { horizontal, vertical, childBoxes: boxes, bounds };
 }
 
 function fitSection(section, enabled) {
   section.style.setProperty('--sf-slide-font-scale', '1');
   section.removeAttribute('data-auto-fitted');
-  if (!enabled || !section.clientWidth || !section.clientHeight) return 1;
+  const hidden = !section.clientWidth || !section.clientHeight;
+  const temporary = ['display', 'visibility', 'transform', 'opacity', 'pointer-events'].map(property => ({ property, value: section.style.getPropertyValue(property), priority: section.style.getPropertyPriority(property) }));
+  if (hidden) {
+    section.style.setProperty('display', 'block', 'important');
+    section.style.setProperty('visibility', 'hidden', 'important');
+    section.style.setProperty('transform', 'none', 'important');
+    section.style.setProperty('opacity', '0', 'important');
+    section.style.setProperty('pointer-events', 'none', 'important');
+  }
+  if (!enabled || !section.clientWidth || !section.clientHeight) {
+    for (const { property, value, priority } of temporary) value ? section.style.setProperty(property, value, priority) : section.style.removeProperty(property);
+    return 1;
+  }
   let scale = 1;
   let measured = measureOverflow(section);
   while ((measured.horizontal || measured.vertical) && scale > MIN_AUTO_FIT_SCALE) {
@@ -195,6 +211,7 @@ function fitSection(section, enabled) {
     measured = measureOverflow(section);
   }
   if (scale < 1) section.dataset.autoFitted = String(scale);
+  for (const { property, value, priority } of temporary) value ? section.style.setProperty(property, value, priority) : section.style.removeProperty(property);
   return scale;
 }
 
@@ -228,6 +245,18 @@ function scheduleOverflowReport() {
 }
 window.addEventListener('resize', scheduleOverflowReport);
 
+async function openPrintDialog() {
+  if (printRequested || !new URLSearchParams(location.search).has('print-pdf')) return;
+  printRequested = true;
+  await document.fonts?.ready;
+  await Promise.all([...slideRoot.querySelectorAll('img')].map(image => image.decode?.().catch(() => {}) || Promise.resolve()));
+  fitSlides();
+  deck?.layout();
+  reportOverflow();
+  window.__slideforgePrintReady = true;
+  setTimeout(() => window.print(), 250);
+}
+
 async function draw(projectInput) {
   const project = normalizeProject(projectInput);
   currentProject = project;
@@ -255,8 +284,10 @@ async function draw(projectInput) {
   deck = new Reveal(revealRoot, { view: 'slide', scrollActivationWidth: null, width, height: 720, margin: 0.06, minScale: 0.2, maxScale: 2, controls: false, progress: !!config.progress, slideNumber: !!config.slideNumber, transition: config.transition, hash: !window.frameElement, plugins: [RevealHighlight, RevealNotes, RevealSearch, RevealZoom] });
   await deck.initialize();
   mountNavigationControls(config, project.slides.length);
+  deck.on('slidechanged', scheduleOverflowReport);
   deck.layout();
   scheduleOverflowReport();
+  openPrintDialog();
   if (config.enableCustomJs && config.customJs) {
     try { new Function('deck', 'root', 'project', config.customJs)(deck, slideRoot, project); }
     catch (error) { console.error('SlideForge custom JavaScript:', error); }

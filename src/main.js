@@ -149,7 +149,12 @@ $('#new-project').onclick = () => { if (confirm('¿Crear un proyecto nuevo? Expo
 $('#restore').onclick = async () => { const saved = await loadLocal(); if (saved) { project = normalizeProject(saved); selected = 0; history.reset(project); update({ record: false }); updateHistoryButtons(); setStatus('Última sesión restaurada'); } };
 $('#open-preview').onclick = () => window.open(playerUrl, '_blank');
 $('#present').onclick = () => window.open(playerUrl, '_blank');
-$('#export-pdf').onclick = () => { const windowRef = window.open(`${playerUrl}?print-pdf`, '_blank'); windowRef?.addEventListener('load', () => windowRef.postMessage({ type: 'slideforge:project', project }, location.origin)); };
+$('#export-pdf').onclick = () => {
+  const windowRef = window.open(`${playerUrl}?print-pdf`, '_blank');
+  if (!windowRef) { alert('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para SlideForge e inténtalo nuevamente.'); return; }
+  setStatus('Preparando PDF · elige “Guardar como PDF” en el diálogo de impresión');
+  windowRef.addEventListener('load', () => windowRef.postMessage({ type: 'slideforge:project', project }, location.origin));
+};
 $('#export-md').onclick = () => downloadText(serializeMarkdown(project), 'slides.md', 'text/markdown');
 $('#export-project').onclick = () => run(() => exportProject(project));
 $('#export-web').onclick = () => run(() => exportWeb(project));

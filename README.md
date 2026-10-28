@@ -25,6 +25,8 @@ Las presentaciones usan una pantalla fija por diapositiva. Las slides, tablas, b
 
 Al añadir la primera imagen a una diapositiva de contenido, SlideForge activa automáticamente el diseño **Imagen + texto**. La imagen conserva su proporción, se limita al espacio disponible y vuelve a ejecutar el autoajuste cuando termina de cargar. El nombre del archivo se convierte en un texto alternativo inicial que puedes editar directamente en Markdown.
 
+El botón **PDF / Imprimir** abre la vista oficial de impresión de Reveal.js y, cuando fuentes, imágenes y diagramas están listos, muestra automáticamente el diálogo del navegador. Selecciona **Guardar como PDF** como destino. Si no se abre la vista, habilita las ventanas emergentes para SlideForge.
+
 El HTML se sanitiza antes de mostrarse. Al importar un proyecto JSON o `.slideforge.zip`, SlideForge conserva su JavaScript personalizado pero lo deja desactivado hasta que el usuario lo revise y lo active manualmente. Los `iframe` insertados se ejecutan en un entorno aislado.
 
 Los bloques interactivos usan esta forma:
